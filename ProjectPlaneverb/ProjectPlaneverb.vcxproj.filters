@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\Context\PvContext.cpp" />
+    <ClCompile Include="src\FDTD\Grid.cpp" />
+    <ClCompile Include="src\Geometry\GeometryManager.cpp" />
+    <ClCompile Include="src\FDTD\FDTD.cpp" />
+    <ClCompile Include="src\DSP\Analyzer.cpp" />
+    <ClCompile Include="src\Emissions\EmissionManager.cpp" />
+    <ClCompile Include="src\FDTD\FreeGrid.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\PvDefinitions.h" />
+    <ClInclude Include="include\Planeverb.h" />
+    <ClInclude Include="include\PvTypes.h" />
+    <ClInclude Include="src\Context\PvContext.h" />
+    <ClInclude Include="src\DSP\Analyzer.h" />
+    <ClInclude Include="src\Emissions\EmissionManager.h" />
+    <ClInclude Include="src\FDTD\FreeGrid.h" />
+    <ClInclude Include="src\FDTD\Grid.h" />
+    <ClInclude Include="src\Geometry\GeometryManager.h" />
+    <ClInclude Include="include\PvMathTypes.h" />
+    <ClInclude Include="src\Util\ScopedTimer.h" />
+  </ItemGroup>
+</Project>

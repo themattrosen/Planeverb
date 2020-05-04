@@ -30,3 +30,9 @@
 *.exe
 *.out
 *.app
+
+# User
+bin/
+bin-int/
+.vs/
+.user

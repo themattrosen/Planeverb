@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\External\include\Debug\glad_debug.cpp" />
+    <ClCompile Include="..\External\include\Release\glad_release.cpp" />
+    <ClCompile Include="ImGui\imgui.cpp" />
+    <ClCompile Include="ImGui\imgui_demo.cpp" />
+    <ClCompile Include="ImGui\imgui_draw.cpp" />
+    <ClCompile Include="ImGui\imgui_impl_glfw.cpp" />
+    <ClCompile Include="ImGui\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="ImGui\imgui_widgets.cpp" />
+    <ClCompile Include="src\Graphics\Graphics.cpp" />
+    <ClCompile Include="src\Editor\Editor.cpp" />
+    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\Audio\AudioCore.cpp" />
+    <ClCompile Include="src\Audio\AudioData.cpp" />
+    <ClCompile Include="src\Editor\WindowsFileBrowsing.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\Graphics\Graphics.h" />
+    <ClInclude Include="src\Util.h" />
+    <ClInclude Include="src\Editor\Editor.h" />
+    <ClInclude Include="src\Audio\AudioCore.h" />
+    <ClInclude Include="src\Audio\AudioData.h" />
+    <ClInclude Include="src\Editor\WindowsFileBrowsing.h" />
+  </ItemGroup>
+</Project>
