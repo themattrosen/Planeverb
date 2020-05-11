@@ -332,6 +332,7 @@ namespace Planeverb
 			vec2 dim((Real)m_gridX, (Real)m_gridY);
 			int nextIndex = index;
 			const constexpr Real maxDelay = std::numeric_limits<Real>::max();
+			Real delay = maxDelay;
 			Real nextDelay = maxDelay;
 			Real samplingRate = (Real)m_samplingRate;
 			Real wavelength = PV_C / (Real)m_resolution;
@@ -339,12 +340,12 @@ namespace Planeverb
 			Real thresholdDist = threshold * wavelength;
 
 			// loop while not close to the listener
-			while (nextDelay > PV_DELAY_CLOSE_THRESHOLD && loudness < PV_DISTANCE_GAIN_THRESHOLD)
+			while (delay > PV_DELAY_CLOSE_THRESHOLD && loudness < PV_DISTANCE_GAIN_THRESHOLD)
 			{
 				int r, c;
 				INDEX_TO_POS(r, c, nextIndex, dim);
 				Real nextLoudness = 0.f;
-				nextDelay = maxDelay;
+				Real nextDelay = maxDelay;
 
 				// for each neighbor find the neighbor with the smallest delay time
 				for (int i = 0; i < _countof(POSSIBLE_NEIGHBORS); ++i)
@@ -357,7 +358,9 @@ namespace Planeverb
 					int newPosIndex = INDEX(nr, nc, dim);
 					auto& result = m_results[newPosIndex];
 					Real delay = m_delaySamples[newPosIndex];
-					if (delay < nextDelay && result.occlusion > 0.f)
+					if ((unsigned)delay == numSamples || result.occlusion == 0.f)
+						continue;
+					else if (delay < nextDelay && result.occlusion > 0.f)
 					{
 						nextLoudness = result.occlusion;
 						nextIndex = newPosIndex;
@@ -365,13 +368,14 @@ namespace Planeverb
 					}
 				}
 
-				loudness = nextLoudness;
-
 				// case couldn't find a valid neighbor
-				if (nextDelay == std::numeric_limits<Real>::max())
+				if (nextDelay == std::numeric_limits<Real>::max() || nextDelay >= delay)
 				{
 					break;
 				}
+
+				delay = nextDelay;
+				loudness = nextLoudness;
 
 				// line of sight check
 				Real geodesicDist = PV_C * nextDelay / samplingRate;

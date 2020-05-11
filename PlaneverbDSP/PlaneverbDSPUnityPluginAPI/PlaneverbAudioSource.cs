@@ -9,6 +9,9 @@ namespace Planeverb
 		// handle to the clip that's being played
 		private AudioClip clip = null;
 
+		// name of the audio clip (for debugging purposes)
+		private string clipName = null; 
+
 		// read index into the clip data
 		private int readIndex = 0;
 
@@ -70,6 +73,7 @@ namespace Planeverb
 			{
 				clip = null;
 				readIndex = 0;
+				clipName = null;
 				samples = 0;
 				clipData = null;
 				isPlaying = false;
@@ -77,10 +81,15 @@ namespace Planeverb
 			else
 			{
 				clip = newClip;
+				clipName = clip.name;
 				readIndex = 0;
-				samples = clip.samples;
+				samples = clip.samples * clip.channels;
 				clipData = new float[samples];
-				clip.GetData(clipData, 0);
+				bool valid = clip.GetData(clipData, 0);
+				if(!valid)
+				{
+					Debug.Log("Oh?");
+				}
 				isPlaying = true;
 			}
 		}
@@ -162,7 +171,7 @@ namespace Planeverb
 		public PlaneverbDSPInput GetInput()
 		{
 			PlaneverbOutput pvoutput = emitter.GetOutput();
-			dspParams.obstructionGain = pvoutput.obstructionGain;
+			dspParams.obstructionGain = pvoutput.occlusion;
 			dspParams.lowpass = pvoutput.lowpass;
 			dspParams.rt60 = pvoutput.rt60;
 			dspParams.directionX = pvoutput.directionX;

@@ -9,9 +9,10 @@ namespace Planeverb
 	class PlaneverbReverb : MonoBehaviour
 	{
 		// a value on the range [0, 3), represents the index into the output fetcher array
-		public int myIndex;
+		public int myIndex = -1;
 		public static int MAX_REVERBS = 3;
 		private static int runtimeIndex = 0;
+		private static bool pvDSPProcessFlag = false;
 
 		private PlaneverbAudioSource[] pvSources;
 		private PlaneverbAudioSource[] audioThreadSources = new PlaneverbAudioSource[1024];
@@ -42,7 +43,6 @@ namespace Planeverb
 		private void OnAudioFilterRead(float[] data, int channels)
 		{
 			int dataBufferLength = data.Length;
-			bool pvDSPProcessFlag = false;
 
 			// case: first reverb component to run during this audio frame, and there are emitters playing
 			if(runtimeIndex == 0 && pvSources != null)

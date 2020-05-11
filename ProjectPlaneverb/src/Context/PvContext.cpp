@@ -34,8 +34,11 @@ namespace Planeverb
 	// deallocates context ptr
 	void Exit()
 	{
-		delete g_context;
-		g_context = nullptr;
+		if (g_context)
+		{
+			delete g_context;
+			g_context = nullptr;
+		}
 	}
 
 	// shutsdown and restarts systems with a new config

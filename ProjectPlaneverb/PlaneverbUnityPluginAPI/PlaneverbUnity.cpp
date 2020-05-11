@@ -89,7 +89,7 @@ extern "C"
 	PlaneverbGetOutput(int emissionID)
 	{
 		PlaneverbOutput output;
-		auto poutput =Planeverb::GetOutput((Planeverb::EmissionID)emissionID);
+		auto poutput = Planeverb::GetOutput((Planeverb::EmissionID)emissionID);
 		output.occlusion = poutput.occlusion;
 		output.rt60 = poutput.rt60;
 		output.lowpass = poutput.lowpass;
