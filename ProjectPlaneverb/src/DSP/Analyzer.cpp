@@ -11,8 +11,8 @@
 namespace Planeverb
 {
 	// allocate memory for analysis results
-	Analyzer::Analyzer(Grid * grid, FreeGrid* freeGrid) :
-		m_grid(grid), m_freeGrid(freeGrid), m_results(nullptr)
+	Analyzer::Analyzer(Grid * grid, FreeGrid* freeGrid, char* mem) :
+		m_mem(mem),	m_grid(grid), m_freeGrid(freeGrid), m_results(nullptr)
 	{
 		// set up data
 		vec2 gridSize = m_grid->GetGridSize();
@@ -28,7 +28,6 @@ namespace Planeverb
 		unsigned size =
 			m_gridX * m_gridY * sizeof(AnalyzerResult) +
 			m_gridX * m_gridY * sizeof(Real);
-		m_mem = new char[size];
 		if (!m_mem)
 		{
 			throw pv_NotEnoughMemory;
@@ -41,7 +40,7 @@ namespace Planeverb
 	Analyzer::~Analyzer()
 	{
 		// delete pool of memory
-		delete[] m_mem;
+		//delete[] m_mem;
 	}
 
 	// analyze in parallel
@@ -135,6 +134,27 @@ namespace Planeverb
 			return nullptr;
 		const auto* res = &(m_results[INDEX(posX, posY, vec2((Real)m_gridX, (Real)m_gridY))]);
 		return res;
+	}
+
+	unsigned Analyzer::GetMemoryRequirement(const PlaneverbConfig * config)
+	{
+		Real minWavelength = PV_C / (Real)config->gridResolution;
+		Real m_dx = minWavelength / PV_POINTS_PER_WAVELENGTH;
+		Real m_dt = m_dx / (PV_C * PV_SQRT_3 * Real(2.0));
+
+		vec2 m_gridSize;
+		m_gridSize.x = (1.f / m_dx) * config->gridSizeInMeters.x;
+		m_gridSize.y = (1.f / m_dx) * config->gridSizeInMeters.y;
+
+		unsigned m_gridX = (unsigned)m_gridSize.x;
+		unsigned m_gridY = (unsigned)m_gridSize.y;
+		
+		// find size for both grids, allocate pool of memory
+		unsigned size =
+			m_gridX * m_gridY * sizeof(AnalyzerResult) +
+			m_gridX * m_gridY * sizeof(Real);
+
+		return size;
 	}
 
 	Real Analyzer::AnalyzeOcclusion(unsigned index, const Cell * response, const vec3& listenerPos, unsigned numSamples)

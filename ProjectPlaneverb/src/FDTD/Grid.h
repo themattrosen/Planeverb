@@ -42,7 +42,7 @@ namespace Planeverb
 	{
 	public:
 		// system init/exit
-		Grid(const PlaneverbConfig* config);
+		Grid(const PlaneverbConfig* config, char* mem);
 		~Grid();
 
 		void GenerateResponseCPU(const vec3& listener);
@@ -63,7 +63,7 @@ namespace Planeverb
 		void UpdateAABB(const AABB* oldTransform, const AABB* newTransform);
 
 		void PrintGrid();
-
+		static unsigned GetMemoryRequirement(const struct PlaneverbConfig* config);
 	private:
 		char* m_mem;								// memory pool
 		Cell* m_grid;								// cell grid

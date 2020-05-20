@@ -35,4 +35,5 @@
 bin/
 bin-int/
 .vs/
-.user
+*.user
+*.dat

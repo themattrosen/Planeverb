@@ -10,11 +10,11 @@ namespace Planeverb
 	class FreeGrid
 	{
 	public:
-		FreeGrid(const PlaneverbConfig* config);
+		FreeGrid(const PlaneverbConfig* config, char* mem);
 		~FreeGrid();
 
 		Real GetEFreePerR(int listenerIndX, int listenerIndY, int emitterIndX, int emitterIndY);
-
+		static unsigned GetMemoryRequirement(const struct PlaneverbConfig* config);
 
 	private:
 

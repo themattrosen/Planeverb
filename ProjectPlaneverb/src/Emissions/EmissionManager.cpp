@@ -28,6 +28,12 @@ namespace Planeverb
 	}
 #pragma endregion
 
+	EmissionManager::~EmissionManager()
+	{
+		m_emitterPositions.~vector();
+		m_openSlots.~vector();
+	}
+
 	EmissionID EmissionManager::Emit(const vec3 & emitterPosition)
 	{
 		// case there is an ID that can be reused
@@ -66,6 +72,11 @@ namespace Planeverb
 		if(id >= 0 && id < size)
 			return &m_emitterPositions[id];
 		return nullptr;
+	}
+
+	unsigned EmissionManager::GetMemoryRequirement(const PlaneverbConfig * config)
+	{
+		return 0;
 	}
 
 }

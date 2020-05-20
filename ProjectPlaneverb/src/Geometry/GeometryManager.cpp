@@ -43,8 +43,13 @@ namespace Planeverb
 
 #pragma endregion
 
-	GeometryManager::GeometryManager(Grid * grid) :
-		m_geometry(), m_openSlots(), m_highestID(0), m_gridPtr(grid), m_geometryChanges()
+	GeometryManager::GeometryManager(Grid * grid, char* mem) :
+		m_geometry(), 
+		m_openSlots(), 
+		m_highestID(),
+		m_geometryChanges(),
+		m_mutex(),
+		m_gridPtr(grid)
 	{
 		// reserve some memory to avoid vector resizing
 		m_geometryChanges.reserve(20);
@@ -144,5 +149,9 @@ namespace Planeverb
 			// debug print grid
 			m_gridPtr->PrintGrid();
 		#endif
+	}
+	unsigned GeometryManager::GetMemoryRequirement(const PlaneverbConfig * config)
+	{
+		return 0;
 	}
 } // namespace Planeverb

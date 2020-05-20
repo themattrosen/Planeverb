@@ -14,12 +14,18 @@
 
 namespace Planeverb
 { 
-	FreeGrid::FreeGrid(const PlaneverbConfig * config) : 
+	FreeGrid::FreeGrid(const PlaneverbConfig * config, char* mem) : 
 		m_grid(nullptr),
 		m_EFree(0.f)
 	{
 		// make a new temporary grid
-		m_grid = new Grid(config);
+		unsigned size = Grid::GetMemoryRequirement(config);
+		char* temporaryPool = new char[size];
+		if (!temporaryPool)
+		{
+			throw pv_NotEnoughMemory;
+		}
+		m_grid = new Grid(config, temporaryPool);
 		if (!m_grid)
 		{
 			throw pv_NotEnoughMemory;
@@ -53,6 +59,10 @@ namespace Planeverb
 		// delete the temporary grid
 		delete m_grid;
 		m_grid = nullptr;
+
+		// delete temporary emmory pool.
+		delete[] temporaryPool;
+		temporaryPool = nullptr;
 	}
 
 	FreeGrid::~FreeGrid()
@@ -78,6 +88,11 @@ namespace Planeverb
 
 		// divide free energy by distance
 		return efree / r;
+	}
+
+	unsigned FreeGrid::GetMemoryRequirement(const PlaneverbConfig * config)
+	{
+		return 0;
 	}
 
 	void FreeGrid::ParseFile(const PlaneverbConfig* config, std::ifstream & file)

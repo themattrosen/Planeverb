@@ -12,7 +12,7 @@ namespace Planeverb
 	class GeometryManager
 	{
 	public:
-		GeometryManager(Grid* grid);
+		GeometryManager(Grid* grid, char* mem);
 		~GeometryManager();
 		PlaneObjectID AddObject(const AABB* box);
 		const AABB* GetPlaneObject(PlaneObjectID id) const;
@@ -20,6 +20,8 @@ namespace Planeverb
 		void UpdateObject(PlaneObjectID id, const AABB* transform);
 
 		void PushGeometryChanges();
+
+		static unsigned GetMemoryRequirement(const struct PlaneverbConfig* config);
 
 	private:
 		// Internal type for geometry changes
@@ -39,10 +41,10 @@ namespace Planeverb
 		std::vector<AABB> m_geometry;					// keep track of AABBs, object ID is index into vector
 		std::vector<PlaneObjectID> m_openSlots;			// list of open AABBs
 		PlaneObjectID m_highestID;						// next ID to dispense
-		Grid* m_gridPtr;								// handle to the grid
 
 		std::vector<GeometryChange> m_geometryChanges;	// queue of geometry changes to happen at the next sync point
 		std::mutex m_mutex;								// sync mutex
+		Grid* m_gridPtr;								// handle to the grid
 		using GLock = std::lock_guard<std::mutex>;		// ease of use typedef for lock_guard
 	};
 } // namespace Planeverb

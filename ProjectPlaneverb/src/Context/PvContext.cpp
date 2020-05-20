@@ -110,30 +110,51 @@ namespace Planeverb
 		std::memcpy(&m_config, config, sizeof(PlaneverbConfig));
 
 		// determine size for context pool, throw if operator new fails
-		unsigned size = sizeof(GeometryManager) + sizeof(Grid) + sizeof(EmissionManager) + sizeof(Analyzer) + sizeof(FreeGrid);
-		m_mem = new char[size];
-		if (m_mem == nullptr)
+		unsigned systemSize = sizeof(GeometryManager) + sizeof(Grid) + sizeof(EmissionManager) + sizeof(Analyzer) + sizeof(FreeGrid);
+		unsigned internalSize = GeometryManager::GetMemoryRequirement(config) +
+			Grid::GetMemoryRequirement(config) +
+			EmissionManager::GetMemoryRequirement(config) +
+			Analyzer::GetMemoryRequirement(config) +
+			FreeGrid::GetMemoryRequirement(config);
+		unsigned size = systemSize + internalSize;
+		m_systemMem = new char[size];
+		if (m_systemMem == nullptr)
 		{
 			throw pv_NotEnoughMemory;
 		}
+
+		m_mem = m_systemMem + systemSize;
 		
+		char* tempSysMem = m_systemMem;
+		char* tempPoolMem = m_mem;
+
 		// set pool memory to 0
-		std::memset(m_mem, 0, size);
+		std::memset(m_systemMem, 0, size);
 
 		// placement new construct the grid
-		m_grid = new (m_mem) Grid(&m_config);
+		m_grid = new (tempSysMem) Grid(&m_config, tempPoolMem);
+		tempSysMem += sizeof(Grid);
+		tempPoolMem += Grid::GetMemoryRequirement(config);
 
 		// placement new construct the geometry manager
-		m_geometry = new (m_mem + sizeof(Grid)) GeometryManager(m_grid);
+		m_geometry = new (tempSysMem) GeometryManager(m_grid, tempPoolMem);
+		tempSysMem += sizeof(GeometryManager);
+		tempPoolMem += GeometryManager::GetMemoryRequirement(config);
 
 		// placement new construct the emissions manager
-		m_emissions = new (m_mem + sizeof(Grid) + sizeof(GeometryManager)) EmissionManager();
+		m_emissions = new (tempSysMem) EmissionManager(tempPoolMem);
+		tempSysMem += sizeof(EmissionManager);
+		tempPoolMem += EmissionManager::GetMemoryRequirement(config);
 
 		// placement new construct the free grid
-		m_freeGrid = new (m_mem + sizeof(Grid) + sizeof(GeometryManager) + sizeof(EmissionManager) + sizeof(Analyzer)) FreeGrid(&m_config);
+		m_freeGrid = new (tempSysMem) FreeGrid(&m_config, tempPoolMem);
+		tempSysMem += sizeof(FreeGrid);
+		tempPoolMem += FreeGrid::GetMemoryRequirement(config);
 
 		// placement new construct the analyzer
-		m_analyzer = new (m_mem + sizeof(Grid) + sizeof(GeometryManager) + sizeof(EmissionManager)) Analyzer(m_grid, m_freeGrid);
+		m_analyzer = new (tempSysMem) Analyzer(m_grid, m_freeGrid, tempPoolMem);
+		tempSysMem += sizeof(Analyzer);
+		tempPoolMem += Analyzer::GetMemoryRequirement(config);
 
 		// start background thread after all systems are initialized
 		m_backgroundProcessor = std::thread(BackgroundProcessor, this);
@@ -153,6 +174,7 @@ namespace Planeverb
 		m_freeGrid->~FreeGrid();
 
 		// delete pool
-		delete[] m_mem;
+		delete[] m_systemMem;
+		//delete[] m_mem; implied
 	}
 } // namespace Planeverb

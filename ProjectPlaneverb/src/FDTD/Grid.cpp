@@ -23,8 +23,8 @@ namespace Planeverb
 		}
 	} // namespace <>
 
-	Grid::Grid(const PlaneverbConfig* config) :
-		m_mem(nullptr),
+	Grid::Grid(const PlaneverbConfig* config, char* mem) :
+		m_mem(mem),
 		m_grid(nullptr),
 		m_boundaries(nullptr),
 		m_pulseResponse(nullptr),
@@ -63,7 +63,6 @@ namespace Planeverb
 			lengthPerGrid * sizeof(std::vector<Cell>);
 
 		// allocate memory pool, throw for operator new fails. set memory to zero
-		m_mem = new char[size];
 		if (!m_mem)
 		{
 			throw pv_NotEnoughMemory;
@@ -141,8 +140,8 @@ namespace Planeverb
 			}
 
 			// delete the pool
-			delete[] m_mem;
-			m_mem = nullptr;
+			//delete[] m_mem;
+			//m_mem = nullptr;
 		}
 	}
 
@@ -327,5 +326,37 @@ namespace Planeverb
 		}
 
 		std::cout << std::endl;
+	}
+
+	unsigned Grid::GetMemoryRequirement(const PlaneverbConfig * config)
+	{
+		// calculate internals
+		vec2 m_gridOffset = config->gridWorldOffset;
+
+		Real minWavelength = PV_C / (Real)config->gridResolution;
+		Real m_dx = minWavelength / PV_POINTS_PER_WAVELENGTH;
+		Real m_dt = m_dx / (PV_C * PV_SQRT_3 * Real(2.0));
+		unsigned m_samplingRate = (unsigned)(Real(1.0) / m_dt);
+
+		vec2 m_gridSize;
+		m_gridSize.x = (1.f / m_dx) * config->gridSizeInMeters.x;
+		m_gridSize.y = (1.f / m_dx) * config->gridSizeInMeters.y;
+
+		// calculate total memory size
+		// length per grid uses gridsize + 1 for extended velocity fields
+		unsigned lengthPerGrid = (unsigned)(m_gridSize.x + 1) * (unsigned)(m_gridSize.y + 1);
+		unsigned sizePerBoundary = sizeof(BoundaryInfo) * lengthPerGrid;
+		unsigned lengthPerResponse = (unsigned)(m_samplingRate * PV_IMPULSE_RESPONSE_S);
+		unsigned size =
+			lengthPerResponse * sizeof(Real) +	// memory for Gaussian pulse values
+			lengthPerGrid * sizeof(Cell) +		// memory for Cell grid
+			sizePerBoundary +	// memory for boundary information
+
+			/// memory for pulse response Cell[x][y][t]
+			///sizePerGrid * lengthPerResponse;
+			// memory for pulse response std::vector<Cell>[x][y]
+			lengthPerGrid * sizeof(std::vector<Cell>);
+
+		return size;
 	}
 } // namespace Planeverb

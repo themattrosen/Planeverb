@@ -41,6 +41,7 @@ namespace Planeverb
 
 		vec3 m_listenerPos;					// global listener position
 
+		char* m_systemMem;
 		char* m_mem;						// all memory for systems stored linearly
 
 		// FDTD manager
