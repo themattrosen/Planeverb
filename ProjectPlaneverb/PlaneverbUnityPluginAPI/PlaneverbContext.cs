@@ -59,6 +59,8 @@ namespace Planeverb
 
 		#region MonoBehaviour Overloads
 		public PlaneverbConfig config;
+		public bool debugDraw = false;
+		private static PlaneverbContext contextInstance = null;
 
 		private void Awake()
 		{
@@ -66,6 +68,9 @@ namespace Planeverb
 				(int)config.gridResolution, (int)config.gridBoundaryType,
 				config.tempFileDirectory,
 				config.maxThreadUsage, (int)config.threadExecutionType);
+
+			Debug.AssertFormat(contextInstance == null, "More than one instance of the PlaneverbContext created! Singleton violated.");
+			contextInstance = this;
 		}
 
 		void OnDestroy()
@@ -75,6 +80,11 @@ namespace Planeverb
 		#endregion
 
 		#region Static Interface
+		public static PlaneverbContext GetInstance()
+		{
+			return contextInstance;
+		}
+
 		public static int Emit(Vector3 pos)
 		{
 			return PlaneverbEmit(pos.x, pos.y, pos.z);

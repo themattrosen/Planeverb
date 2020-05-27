@@ -69,49 +69,98 @@ namespace Planeverb
 	{
 		// user designable parameter: absorption coefficient
 		public AbsorptionCoefficient absorption;
-		private float SIZE_EPSILON = 0.01f;
-		// internal AABB from previous frame stored to reduce calls to update geometry
-		private AABB oldAABB;
+		private const float SIZE_EPSILON = 0.01f;
+		private const int INVALID_ID = -1;
 
 		// internal geometry id
-		private int id;
+		private int id = INVALID_ID;
+		private bool isInHeadSlice = false;
+		private Bounds bounds;
 
 		void Start()
 		{
 			// calculate AABB and add to context
-			AABB properties = CalculateAABB();
-			oldAABB = properties;
-			id = PlaneverbContext.AddGeometry(properties);
+			bounds = GetMaxBounds();
+			isInHeadSlice = IsWithinPlayerHeadSlice(bounds);
+			if (isInHeadSlice)
+			{
+				AABB properties = CalculateAABB(bounds);
+				id = PlaneverbContext.AddGeometry(properties);
+			}
 		}
 
 		void Update()
 		{
-			// calculate the AABB
-			AABB properties = CalculateAABB();
+			// only add if object is at player head slice
+			bounds = GetMaxBounds();
+			isInHeadSlice = IsWithinPlayerHeadSlice(bounds);
 
-			// case the AABB has changed from the previous frame
-			if (properties.position != oldAABB.position || 
-				properties.width != oldAABB.width || 
-				properties.height != oldAABB.height || 
-				properties.absorption != oldAABB.absorption)
+			if (isInHeadSlice)
 			{
+				// calculate the AABB
+				AABB properties = CalculateAABB(bounds);
+
 				// update geometry in the context
-				PlaneverbContext.UpdateGeometry(id, properties);
-				oldAABB = properties;
+				if (id == INVALID_ID)
+				{
+					id = PlaneverbContext.AddGeometry(properties);
+				}
+				else
+				{
+					PlaneverbContext.UpdateGeometry(id, properties);
+				}
+			}
+			else if(id != INVALID_ID)
+			{
+				PlaneverbContext.RemoveGeometry(id);
+				id = INVALID_ID;
+			}
+
+			if(PlaneverbContext.GetInstance().debugDraw)
+			{
+				Color drawColor;
+				if (isInHeadSlice)	drawColor = new Color(0f, 1f, 0f);
+				else				drawColor = new Color(1f, 0f, 0f);
+
+				// debug draw the bounds
+				Vector3 c = bounds.center;
+				Vector3 e = bounds.extents; // half extents
+				Vector3 bbl = c - e; // bottom back left
+				Vector3 bbr = new Vector3(c.x + e.x, c.y - e.y, c.z - e.z); // bottom back right
+				Vector3 tbl = new Vector3(c.x - e.x, c.y + e.y, c.z - e.z); // top back left
+				Vector3 tbr = new Vector3(c.x + e.x, c.y + e.y, c.z - e.z); // top back right
+				Vector3 bfl = new Vector3(c.x - e.x, c.y - e.y, c.z + e.z); // bottom front left
+				Vector3 bfr = new Vector3(c.x + e.x, c.y - e.y, c.z + e.z); // bottom front right
+				Vector3 tfl = new Vector3(c.x - e.x, c.y + e.y, c.z + e.z); // top front left
+				Vector3 tfr = c + e; // top front right
+
+				// connect all the points
+				Debug.DrawLine(bbl, bbr, drawColor);
+				Debug.DrawLine(bbl, bfl, drawColor);
+				Debug.DrawLine(bbl, tbl, drawColor);
+				Debug.DrawLine(bbr, tbr, drawColor);
+				Debug.DrawLine(bbr, bfr, drawColor);
+				Debug.DrawLine(bfl, bfr, drawColor);
+				Debug.DrawLine(bfl, tfl, drawColor);
+				Debug.DrawLine(bfr, tfr, drawColor);
+				Debug.DrawLine(tbl, tbr, drawColor);
+				Debug.DrawLine(tbl, tfl, drawColor);
+				Debug.DrawLine(tbr, tfr, drawColor);
+				Debug.DrawLine(tfl, tfr, drawColor);
 			}
 		}
 
 		void OnDestroy()
 		{
 			// remove from context when object is destroyed
-			PlaneverbContext.RemoveGeometry(id);
+			if (id != INVALID_ID)
+			{
+				PlaneverbContext.RemoveGeometry(id);
+			}
 		}
 
-		private AABB CalculateAABB()
+		private AABB CalculateAABB(Bounds bounds)
 		{
-			// calculate its bounds in world space
-			Bounds bounds = GetMaxBounds(gameObject);
-
 			// calculate full width and height from half width and half height
 			float width = bounds.extents.x * 2f - SIZE_EPSILON;
 			float height = bounds.extents.z * 2f - SIZE_EPSILON;
@@ -131,14 +180,22 @@ namespace Planeverb
 		// helper function taken from gamedev stackexchange:
 		// https://gamedev.stackexchange.com/questions/86863/calculating-the-bounding-box-of-a-game-object-based-on-its-children
 		// user Alex Merlin
-		private Bounds GetMaxBounds(GameObject g)
+		private Bounds GetMaxBounds()
 		{
-			Bounds b = new Bounds(g.transform.position, Vector3.zero);
-			foreach (Collider r in g.GetComponentsInChildren<Collider>())
+			Bounds b = new Bounds(gameObject.transform.position, Vector3.zero);
+			foreach (Collider r in gameObject.GetComponentsInChildren<Collider>())
 			{
 				b.Encapsulate(r.bounds);
 			}
 			return b;
+		}
+
+		bool IsWithinPlayerHeadSlice(Bounds b)
+		{
+			float y = PlaneverbListener.GetInstance().GetPosition().y;
+			float thisY = b.center.y;
+			float halfHeight = b.extents.y; // extents are half sizes
+			return (thisY - halfHeight) <= y && (thisY + halfHeight) >= y;
 		}
 
 		// parallel array for absorption enum
