@@ -362,7 +362,7 @@ namespace Planeverb
 	{
 		Real minWavelength = PV_C / (Real)resolution;
 		dx = minWavelength / PV_POINTS_PER_WAVELENGTH;
-		dt = dx / (PV_C * PV_SQRT_3 * Real(2.0));
+		dt = dx / (PV_C * 2.25);
 		samplingRate = (unsigned)(Real(1.0) / dt);
 	}
 } // namespace Planeverb

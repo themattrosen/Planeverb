@@ -30,7 +30,7 @@
 
 // Redefine these to true to enable debug print information to stdout
 #define PRINT_PROFILE false
-#define PRINT_PROFILE_SECTION false
+#define PRINT_PROFILE_SECTION true
 #define PRINT_GRID false
 
 #if PRINT_PROFILE

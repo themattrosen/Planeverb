@@ -424,7 +424,7 @@ void Editor::ShowAnalyzerWindow()
 static float IRGetter(void* data, int idx)
 {
 	const Planeverb::Cell* response = reinterpret_cast<const Planeverb::Cell*>(data);
-	return response[idx].pr;
+	return response[idx].pr * 2;
 }
 
 void Editor::ShowIRWindow()

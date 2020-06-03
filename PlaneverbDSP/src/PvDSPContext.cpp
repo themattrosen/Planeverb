@@ -222,7 +222,7 @@ namespace PlaneverbDSP
 		{
 			float dotValue = directivity.Dot(forward);
 			float cardioid = (1.f + dotValue) / 2.f;
-			return cardioid;
+			return (cardioid > 0.1f) ? cardioid : 0.1f;
 		}
 
 		using SourceDirectivityPatternFunc = float(*)(const vec2& directivity, const vec2& forward);

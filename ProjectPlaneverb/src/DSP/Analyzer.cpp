@@ -268,8 +268,7 @@ namespace Planeverb
 			int count = 0;
 			Real invCount = 1.f;
 			Real nextSquared = 0.f; 
-			Real energyDecayCurve = 0.f;
-			Real energyDecayCurveDB = 0.f;
+			
 			Real B = 0.f;
 			Real x_i = 0.f, xbar = 0.f, xterm = 0.f;
 			Real y_i = 0.f, ybar = 0.f, yterm = 0.f;
@@ -277,6 +276,38 @@ namespace Planeverb
 
 			// end point for when to start keeping track for linear regression
 			int endPoint = end - (int)(PV_SCHROEDER_OFFSET_S * samplingRate);
+
+			Real energyDecayCurve = 0.f;
+			Real energyDecayCurveDB = 0.f;
+			for (int i = end; i >= startingPoint; --i)
+			{
+				// calculate next schroeder value
+				nextSquared = response[i].pr;
+				energyDecayCurve += nextSquared * nextSquared;
+
+				// calculate next schroeder value in dB
+				energyDecayCurveDB = 10.f * std::log10(energyDecayCurve);
+
+				// regression math
+				if (i < endPoint)
+				{
+					count++;
+
+					// calculate x
+					x_i = (Real)i / samplingRate;
+					xbar += x_i;
+					
+					// calculate y
+					y_i = energyDecayCurveDB;
+					ybar += y_i;
+				}
+			}
+			
+			xbar = xbar / count;
+			ybar = ybar / count;
+
+			energyDecayCurve = 0.f;
+			energyDecayCurveDB = 0.f;
 
 			// loop backwards for Schroeder integration
 			for (int i = end; i >= startingPoint; --i)
@@ -291,18 +322,13 @@ namespace Planeverb
 				// regression math
 				if (i < endPoint)
 				{
-					++count;
-					invCount = 1.f / (Real)count;
-
 					// calculate x
 					x_i = (Real)i / samplingRate;
-					xbar += x_i;
-					xterm = x_i - xbar * invCount;
+					xterm = x_i - xbar;
 
 					// calculate y
 					y_i = energyDecayCurveDB;
-					ybar += y_i;
-					yterm = (y_i - ybar * invCount);
+					yterm = y_i - ybar;
 
 					// calculate numer
 					numer += (xterm * yterm);
@@ -323,10 +349,25 @@ namespace Planeverb
 	{
 		vec2 accum{ 0, 0 };
 		const Cell* responseStart = response;
+		int numIterations = (int)numSamples;
+		bool found = false;
 		for (unsigned i = 0; i < numSamples; ++i)
 		{
-			accum.x += Real(-1) * response->vx * response->pr;
-			accum.y += Real(-1) * response->vy * response->pr;
+			Real next = response->pr;
+			if (!found && std::abs(next) > PV_AUDIBLE_THRESHOLD_GAIN)
+			{
+				numIterations = (int)(PV_DRY_GAIN_ANALYSIS_LENGTH * (Real)m_samplingRate) + i;
+				if (numIterations > (int)m_responseLength)
+					numIterations = (int)m_responseLength;
+				found = true;
+			}
+			else
+			{
+				accum.x += Real(-1) * response->vx * next;
+				accum.y += Real(-1) * response->vy * next;
+			}
+
+			
 			++response;
 		}
 

@@ -14,9 +14,9 @@ int main()
 	Planeverb::PlaneverbConfig config;
 	config.gridResolution = Planeverb::pv_LowResolution;
 	config.gridBoundaryType = Planeverb::pv_AbsorbingBoundary;
-	config.gridSizeInMeters = Planeverb::vec2(10.f, 10.f);
+	config.gridSizeInMeters = Planeverb::vec2(25.f, 25.f);
 	config.tempFileDirectory = ".";
-	config.maxThreadUsage = 0;
+	config.maxThreadUsage = 2;
 	
 	Planeverb::Init(&config);
 	
