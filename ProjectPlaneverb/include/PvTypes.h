@@ -66,6 +66,7 @@ namespace Planeverb
 		float rt60;
 		float lowpass;
 		vec2 direction;
+		vec2 sourceDirectivity;
 	};
 
 	// ID typedefs
@@ -85,7 +86,6 @@ namespace Planeverb
 	const constexpr Real PV_INV_Z_AIR = (Real)1.f / PV_Z_AIR;			// inverse impedance for absorbing boundaries
 	const constexpr Real PV_INV_Z_REFLECT = (Real)0.0f;					// inverse impedance for reflecting boundaries
 	const constexpr Real PV_AUDIBLE_THRESHOLD_GAIN = (Real)0.00000316f;	// precalculated -110 dB converted to voltage gain
-	const constexpr Real PV_IMPULSE_RESPONSE_S = (Real)0.225f;			// number of seconds to collect per impulse response
 	const constexpr Real PV_DRY_GAIN_ANALYSIS_LENGTH = (Real)0.01f;		// length of time to process the initial pulse for occlusion
 	const constexpr Real PV_WET_GAIN_ANALYSIS_LENGTH = (Real)0.076f;	// length of time to process early reflections
 	const constexpr Real PV_INITIAL_IMPULSE_ESTIMATE = (Real)0.015f;	// initial impulse estimate
@@ -97,5 +97,26 @@ namespace Planeverb
 	const constexpr Real PV_SCHROEDER_OFFSET_S = (Real)0.01f;			// experimentally calculated amount to cut off schroeder tail
 	const constexpr Real PV_DISTANCE_GAIN_THRESHOLD = (Real)0.891251f;	// -1dB converted to voltage gain
 	const constexpr Real PV_DELAY_CLOSE_THRESHOLD = (Real)5.f;			// "close enough" delay threshold when analyzing for direction
+	const constexpr Real PV_IMPULSE_RESPONSE_S = PV_SQRT_2 * Real(5.0) / PV_C + Real(0.25);			// number of seconds to collect per impulse response
+	//                                                             ^ should be half of the scene width
+
+	// struct to represent grid cells
+	// 16 bytes
+	struct Cell
+	{
+		Real pr;	// air pressure
+		Real vx;	// x component of particle velocity
+		Real vy;	// y component of particle velocity
+		short b;	// B field packed into 2 2 byte fields
+		short by;	// B field packed into 2 2 byte fields
+
+		Cell(Real _pr = 0.f, Real _vx = 0.f, Real _vy = 0.f, int boundaryCoef = 1, int _by = 1) :
+			pr(_pr),
+			vx(_vx),
+			vy(_vy),
+			b((short)boundaryCoef),
+			by((short)_by)
+		{}
+	};
 
 } // Planeverb

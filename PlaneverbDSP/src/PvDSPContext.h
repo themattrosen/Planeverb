@@ -25,6 +25,8 @@ namespace PlaneverbDSP
 		// update global listener transform
 		void SetListenerTransform(const vec3& position, const vec3& forward);
 
+		EmissionsManager* GetEmissionManager() { return m_emissions; }
+
 	private:
 		PlaneverbDSPConfig m_config;			// copy of the user configuration
 		unsigned m_bufferSize;					// size in bytes of each buffer

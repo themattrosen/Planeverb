@@ -54,7 +54,7 @@ namespace Planeverb
 		else
 			omp_set_num_threads(m_numThreads);
 
-		const int NUM_TASKS = 4;
+		const int NUM_TASKS = 5;
 		int gridSize = (int)m_gridX * (int)m_gridY;
 		int gridIterations = gridSize * NUM_TASKS;
 		vec3 listenerPos = listenerPosGiven;
@@ -102,7 +102,9 @@ namespace Planeverb
 				case 3:	// analyze for delay
 					m_delaySamples[index] = AnalyzeDelay(index, response, m_responseLength);
 					break;
-
+				case 4: // analyze for source direction
+					m_results[index].sourceDirectivity = AnalyzeSourceDirection(index, response, m_responseLength);
+					break;
 			}
 		}
 
@@ -138,10 +140,10 @@ namespace Planeverb
 
 	unsigned Analyzer::GetMemoryRequirement(const PlaneverbConfig * config)
 	{
-		Real minWavelength = PV_C / (Real)config->gridResolution;
-		Real m_dx = minWavelength / PV_POINTS_PER_WAVELENGTH;
-		Real m_dt = m_dx / (PV_C * PV_SQRT_3 * Real(2.0));
-
+		Real m_dx, m_dt;
+		unsigned samplingRate;
+		CalculateGridParameters(config->gridResolution, m_dx, m_dt, samplingRate);
+		
 		vec2 m_gridSize;
 		m_gridSize.x = (1.f / m_dx) * config->gridSizeInMeters.x;
 		m_gridSize.y = (1.f / m_dx) * config->gridSizeInMeters.y;
@@ -314,6 +316,29 @@ namespace Planeverb
 			Real T60 = -60.f / B;
 			return T60;
 		}
+	}
+
+	//Returns attenuation from source assuming cardiod direcivity
+	vec2 Analyzer::AnalyzeSourceDirection(unsigned index, const Cell* response, unsigned numSamples)
+	{
+		vec2 accum{ 0, 0 };
+		const Cell* responseStart = response;
+		for (unsigned i = 0; i < numSamples; ++i)
+		{
+			accum.x += Real(-1) * response->vx * response->pr;
+			accum.y += Real(-1) * response->vy * response->pr;
+			++response;
+		}
+
+		Real denom = (accum.x * accum.x) + (accum.y * accum.y);
+		if (denom == Real(0)) denom = Real(1);
+		else denom = std::sqrt(denom);
+		vec2 radiationFromSource = { accum.x / denom, accum.y / denom };
+		//Vec RadiationFromSource = Vec(-response->vx * response->pr, -response->vy * response->pr);
+		//Vec ForwardVecForSource;
+
+		//return (1.0f + DotProduct(RaditionFromSource, ForwardVecFromSource)) / 2.0f;
+		return radiationFromSource;
 	}
 
 	Real Analyzer::AnalyzeDelay(unsigned index, const Cell * response, unsigned numSamples)

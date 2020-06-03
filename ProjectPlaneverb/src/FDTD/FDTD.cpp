@@ -51,8 +51,21 @@ namespace Planeverb
 		out.lowpass = (float)result->lowpassIntensity;
 		out.rt60 = (float)result->rt60;
 		out.direction = result->direction;
+		out.sourceDirectivity = result->sourceDirectivity;
 
 		return out;
+	}
+
+	std::pair<const Cell*, unsigned> GetImpulseResponse(const vec3& position)
+	{
+		Grid* grid = GetContext()->GetGrid();
+		Real dx = grid->GetDX();
+		vec2 gridPosition =
+		{
+			position.x / dx,
+			position.z / dx
+		};
+		return std::make_pair(grid->GetResponse(gridPosition), grid->GetResponseSize());
 	}
 
 #pragma endregion

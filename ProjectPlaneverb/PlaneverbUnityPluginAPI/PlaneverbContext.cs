@@ -11,6 +11,8 @@ namespace Planeverb
 		public float lowpass;
 		public float directionX;
 		public float directionY;
+		public float sourceDirectionX;
+		public float sourceDirectionY;
 	}
 
 	[AddComponentMenu("Planeverb/PlaneverbContext")]

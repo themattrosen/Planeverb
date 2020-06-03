@@ -32,6 +32,7 @@ private:
 		bool audioWindow;
 		bool gridWindow;
 		bool analyzerWindow;
+		bool IRWindow;
 	} m_windowFlags;
 
 	void InternalUpdate();
@@ -45,6 +46,7 @@ private:
 	void ShowAudioWindow();
 	void ShowGridWindow();
 	void ShowAnalyzerWindow();
+	void ShowIRWindow();
 
 	void DisplayGrid(ImDrawList* drawList);
 	void DisplayAABBs(ImDrawList* drawList, const ImVec2& offset);
@@ -58,6 +60,9 @@ private:
 	bool m_usePlaneverb;
 	float m_volumeDB;
 	AudioData m_audioData;
+
+	std::vector<Planeverb::Cell> m_impulseResponseCopy;
+	unsigned m_impulseResponseLength;
 
 	// grid stuff
 	bool m_showGrid = true;

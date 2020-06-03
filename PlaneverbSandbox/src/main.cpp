@@ -12,7 +12,7 @@ int main()
 	Graphics::Instance().Init();
 	
 	Planeverb::PlaneverbConfig config;
-	config.gridResolution = Planeverb::pv_MidResolution;
+	config.gridResolution = Planeverb::pv_LowResolution;
 	config.gridBoundaryType = Planeverb::pv_AbsorbingBoundary;
 	config.gridSizeInMeters = Planeverb::vec2(10.f, 10.f);
 	config.tempFileDirectory = ".";

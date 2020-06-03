@@ -9,15 +9,18 @@ namespace Planeverb
 	namespace
 	{
 		// Fill a given array with a precomputed Gaussian pulse
-		void GaussianPulse(Real* out, unsigned numSamples)
+		void GaussianPulse(Real* out, unsigned numSamples, Real dt = 0)
 		{
 			// using the formula y = e^(-(t-20)^2 / 100))
+			// use the formula G(t) = e^(-(t-5s)^2 / s^2), s = 10dt
 			const Real delay = (Real)20.f;
-			const Real sigma = (Real)100.f;
+			const Real sigma = (Real)10.f;
+			//const Real sigma = Real(10.0) * dt;
+			//const Real delay = Real(5.0) * sigma;
 			for (unsigned i = 0; i < numSamples; ++i)
 			{
 				Real t = (Real)i;
-				Real val = std::exp(-(t - delay) * (t - delay) / sigma);
+				Real val = std::exp(-(t - delay) * (t - delay) / (sigma * sigma));
 				*out++ = val;
 			}
 		}
@@ -39,10 +42,7 @@ namespace Planeverb
 		// calculate internals
 		m_gridOffset = config->gridWorldOffset;
 
-		Real minWavelength = PV_C / (Real)config->gridResolution;
-		m_dx = minWavelength / PV_POINTS_PER_WAVELENGTH;
-		m_dt = m_dx / (PV_C * PV_SQRT_3 * Real(2.0));
-		m_samplingRate = (unsigned)(Real(1.0) / m_dt);
+		CalculateGridParameters(config->gridResolution, m_dx, m_dt, m_samplingRate);
 
 		m_gridSize.x = (1.f / m_dx) * m_gridDimensions.x;
 		m_gridSize.y = (1.f / m_dx) * m_gridDimensions.y;
@@ -333,10 +333,9 @@ namespace Planeverb
 		// calculate internals
 		vec2 m_gridOffset = config->gridWorldOffset;
 
-		Real minWavelength = PV_C / (Real)config->gridResolution;
-		Real m_dx = minWavelength / PV_POINTS_PER_WAVELENGTH;
-		Real m_dt = m_dx / (PV_C * PV_SQRT_3 * Real(2.0));
-		unsigned m_samplingRate = (unsigned)(Real(1.0) / m_dt);
+		Real m_dx, m_dt;
+		unsigned m_samplingRate;
+		CalculateGridParameters(config->gridResolution, m_dx, m_dt, m_samplingRate);
 
 		vec2 m_gridSize;
 		m_gridSize.x = (1.f / m_dx) * config->gridSizeInMeters.x;
@@ -358,5 +357,12 @@ namespace Planeverb
 			lengthPerGrid * sizeof(std::vector<Cell>);
 
 		return size;
+	}
+	void CalculateGridParameters(int resolution, Real & dx, Real & dt, unsigned & samplingRate)
+	{
+		Real minWavelength = PV_C / (Real)resolution;
+		dx = minWavelength / PV_POINTS_PER_WAVELENGTH;
+		dt = dx / (PV_C * PV_SQRT_3 * Real(2.0));
+		samplingRate = (unsigned)(Real(1.0) / dt);
 	}
 } // namespace Planeverb

@@ -1,9 +1,12 @@
 #pragma once
 #include "PvTypes.h"
 #include <vector>
+#include <mutex>
 
 namespace Planeverb
 {
+	void CalculateGridParameters(int resolution, Real& dx, Real& dt, unsigned& samplingRate);
+
 	// struct to represent wall information
 	// 12 bytes
 	struct BoundaryInfo
@@ -16,25 +19,6 @@ namespace Planeverb
 		{}
 
 		BoundaryInfo& operator=(const BoundaryInfo&) = default;
-	};
-
-	// struct to represent grid cells
-	// 16 bytes
-	struct Cell
-	{
-		Real pr;	// air pressure
-		Real vx;	// x component of particle velocity
-		Real vy;	// y component of particle velocity
-		short b;	// B field packed into 2 2 byte fields
-		short by;	// B field packed into 2 2 byte fields
-
-		Cell(Real _pr = 0.f, Real _vx = 0.f, Real _vy = 0.f, int boundaryCoef = 1, int _by = 1) :
-			pr(_pr),
-			vx(_vx),
-			vy(_vy),
-			b((short)boundaryCoef),
-			by((short)_by)
-		{}
 	};
 
 	// Grid system

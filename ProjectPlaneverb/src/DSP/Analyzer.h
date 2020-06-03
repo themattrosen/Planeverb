@@ -16,6 +16,7 @@ namespace Planeverb
 		Real rt60;
 		Real lowpassIntensity;
 		vec2 direction;
+		vec2 sourceDirectivity;
 	};
 
 	// Analyzes acoustic grid IR output
@@ -35,7 +36,7 @@ namespace Planeverb
 		Real AnalyzeDecayTime(unsigned index, const Cell* response, unsigned numSamples);
 		Real AnalyzeDelay(unsigned index, const Cell* response, unsigned numSamples);
 		vec2 AnalyzeDirection(unsigned index, const Cell* response, const vec3& listenerPos, unsigned numSamples);
-
+		vec2 AnalyzeSourceDirection(unsigned index, const Cell* response, unsigned numSamples);
 		char* m_mem;				// pool of memory
 		AnalyzerResult* m_results;	// 2D grid using 1D memory, grid of results
 		Real* m_delaySamples;		// grid of delay, to be used to find direction

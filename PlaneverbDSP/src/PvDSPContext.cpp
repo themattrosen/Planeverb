@@ -67,6 +67,18 @@ namespace PlaneverbDSP
 		if(g_context)
 			g_context->SetListenerTransform({ posX, posY, posZ }, { forwardX, forwardY, forwardZ });
 	}
+
+	void UpdateEmitter(EmissionID id, float forwardX, float forwardY, float forwardZ)
+	{
+		if (g_context)
+			g_context->GetEmissionManager()->GetDataTarget(id).forward = { forwardX, forwardZ };
+	}
+
+	void SetEmitterDirectivityPattern(EmissionID id, PlaneverbDSPSourceDirectivityPattern pattern)
+	{
+		if (g_context)
+			g_context->GetEmissionManager()->GetDataTarget(id).directivityPattern = pattern;
+	}
 	#pragma endregion
 
 	Context::Context(const PlaneverbDSPConfig* config)
@@ -132,7 +144,7 @@ namespace PlaneverbDSP
 		PV_DSP_SAFE_ARRAY_DELETE(m_mem);
 	}
 
-	// private functions to determine reverb lerp factors
+	// private functions to determine reverb lerp factors and source directivity
 	namespace
 	{
 		const constexpr float TSTAR = 0.1f;
@@ -200,6 +212,25 @@ namespace PlaneverbDSP
 			float a = gain * (term1 - term2) / (term1 - term3);
 			return gain - a;
 		}
+
+		PV_DSP_INLINE float OmniPattern(const vec2& directivity, const vec2& forward)
+		{
+			return 1.f;
+		}
+
+		PV_DSP_INLINE float CardioidPattern(const vec2& directivity, const vec2& forward)
+		{
+			float dotValue = directivity.Dot(forward);
+			float cardioid = (1.f + dotValue) / 2.f;
+			return cardioid;
+		}
+
+		using SourceDirectivityPatternFunc = float(*)(const vec2& directivity, const vec2& forward);
+		SourceDirectivityPatternFunc directivityPatternFuncs[pvd_SourceDirectivityPatternCount] = 
+		{
+			OmniPattern,
+			CardioidPattern
+		};
 	} // namespace <>
 
 	void Context::SubmitSource(EmissionID id, const PlaneverbDSPInput* dspParams,
@@ -235,6 +266,8 @@ namespace PlaneverbDSP
 		emissionData.rt60 = dspParams->rt60;
 		emissionData.direction.x = dspParams->direction.x;
 		emissionData.direction.y = dspParams->direction.y;
+		emissionData.directivity.x = dspParams->sourceDirectivity.x;
+		emissionData.directivity.y = dspParams->sourceDirectivity.y;
 
 		auto& currentData = m_emissions->GetDataCurrent(id);
 		float currRevGainA = FindGainA(currentData.rt60, currentData.occlusion);
@@ -289,6 +322,11 @@ namespace PlaneverbDSP
 			currentright = PV_DSP_INV_SQRT_2 * (ct + st);
 		}
 
+		// figure out source directivity current and target values
+		PlaneverbDSPSourceDirectivityPattern pattern = currentData.directivityPattern;
+		float targetDirectivityGain = directivityPatternFuncs[pattern](emissionData.directivity, emissionData.forward);
+		float currentDirectivityGain = directivityPatternFuncs[pattern](currentData.directivity, emissionData.forward);
+
 		// add processed source with 
 		// required gain to relevant inputBuffer
 		{
@@ -302,14 +340,18 @@ namespace PlaneverbDSP
 			float currentGainArray[NUM_TASKS] = { currRevGainA, currRevGainB, currRevGainC };
 			auto processFunc = [&](float* buf, const float* in, float targetRevGain, float currRevGain, int frames)
 			{
+				float myCurrentLeft = currentleft;
+				float myCurrentRight = currentright;
+				float myDirectivity = currentDirectivityGain;
 				for (int j = 0; j < frames; ++j)
 				{
-					*buf++ += *in++ * currRevGain * currentleft;
-					*buf++ += *in++ * currRevGain * currentright;
+					*buf++ += *in++ * currRevGain * myCurrentLeft * myDirectivity;
+					*buf++ += *in++ * currRevGain * myCurrentRight * myDirectivity;
 
 					currRevGain = LERP_FLOAT(currRevGain, targetRevGain, lerpFactor);
-					currentleft = LERP_FLOAT(currentleft, targetleft, lerpFactor);
-					currentright = LERP_FLOAT(currentright, targetright, lerpFactor);
+					myCurrentRight = LERP_FLOAT(myCurrentRight, targetright, lerpFactor);
+					myCurrentLeft = LERP_FLOAT(myCurrentLeft, targetleft, lerpFactor);
+					myDirectivity = LERP_FLOAT(myDirectivity, targetDirectivityGain, lerpFactor);
 				}
 			};
 
@@ -325,6 +367,10 @@ namespace PlaneverbDSP
 				currentData.direction.y = LERP_FLOAT(currentData.direction.y, emissionData.direction.y, lerpFactor);
 				currentData.occlusion = LERP_FLOAT(currentData.occlusion, emissionData.occlusion, lerpFactor);
 				currentData.rt60 = LERP_FLOAT(currentData.rt60, emissionData.rt60, lerpFactor);
+				currentData.forward.x = LERP_FLOAT(currentData.forward.x, emissionData.forward.x, lerpFactor);
+				currentData.forward.y = LERP_FLOAT(currentData.forward.y, emissionData.forward.y, lerpFactor);
+				currentData.directivity.x = LERP_FLOAT(currentData.directivity.x, emissionData.directivity.x, lerpFactor);
+				currentData.directivity.y = LERP_FLOAT(currentData.directivity.y, emissionData.directivity.y, lerpFactor);
 			}
 		}
 

@@ -20,6 +20,15 @@ namespace PlaneverbDSP
 		pvd_InvalidConfig,		// user passed PlaneverbDSP::Init() a config ptr with invalid data or an invalid config ptr
 	};
 
+	enum PlaneverbDSPSourceDirectivityPattern
+	{
+		pvd_Omni,			// omni pattern
+		pvd_Cardioid,		// cardioid 
+		// add more here
+
+		pvd_SourceDirectivityPatternCount
+	};
+
 	struct PlaneverbDSPConfig
 	{
 		// maximum size of the audio callback buffer in frames
@@ -44,6 +53,7 @@ namespace PlaneverbDSP
 	{
 		float x, y;
 		vec2(float _x = 0, float _y = 0) : x(_x), y(_y) {}
+		inline float Dot(const vec2& rhs) const { return x * rhs.x + y * rhs.y; }
 	};
 
 	struct vec3
@@ -59,6 +69,7 @@ namespace PlaneverbDSP
 		float rt60;
 		float lowpass;
 		vec2 direction;
+		vec2 sourceDirectivity;
 	};
 
 	// ID typedefs

@@ -125,7 +125,7 @@ namespace Planeverb
 				int realSamplesToUse = realSamplesEnd - readIndex;
 				
 				// memcpy the values over
-				Array.Copy(clipData, readIndex, runtimeArray, 0, realSamplesToUse);
+				//Array.Copy(clipData, readIndex, runtimeArray, 0, realSamplesToUse);
 
 				// apply volume
 				float volume = emitter.GetVolumeGain();
@@ -176,6 +176,8 @@ namespace Planeverb
 			dspParams.rt60 = pvoutput.rt60;
 			dspParams.directionX = pvoutput.directionX;
 			dspParams.directionY = pvoutput.directionY;
+			dspParams.sourceDirectionX = pvoutput.sourceDirectionX;
+			dspParams.sourceDirectionY = pvoutput.sourceDirectionY;
 			return dspParams;
 		}
 	}

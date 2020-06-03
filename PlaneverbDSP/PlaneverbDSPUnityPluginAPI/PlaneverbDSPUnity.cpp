@@ -20,6 +20,8 @@ namespace
 		float lowpass;
 		float directionX;
 		float directionY;
+		float sourceDirectionX;
+		float sourceDirectionY;
 	};
 }
 
@@ -62,6 +64,19 @@ extern "C"
 	}
 
 	PVU_EXPORT void PVU_CC
+	PlaneverbDSPUpdateEmitter(int emissionID, float forwardX, float forwardY, float forwardZ)
+	{
+		PlaneverbDSP::UpdateEmitter((PlaneverbDSP::EmissionID)emissionID, forwardX, forwardY, forwardZ);
+	}
+
+	PVU_EXPORT void PVU_CC
+	PlaneverbDSPSetEmitterDirectivityPattern(int emissionId, int pattern)
+	{
+		PlaneverbDSP::SetEmitterDirectivityPattern((PlaneverbDSP::EmissionID)emissionId, 
+			(PlaneverbDSP::PlaneverbDSPSourceDirectivityPattern)pattern);
+	}
+
+	PVU_EXPORT void PVU_CC
 	PlaneverbDSPSendSource(int emissionID, const PlaneverbDSPInput* dspParams,
 		const float* in, int numFrames)
 	{
@@ -71,6 +86,8 @@ extern "C"
 		input.rt60 = dspParams->rt60;
 		input.direction.x = dspParams->directionX;
 		input.direction.y = dspParams->directionY;
+		input.sourceDirectivity.x = dspParams->sourceDirectionX;
+		input.sourceDirectivity.y = dspParams->sourceDirectionY;
 
 		PlaneverbDSP::SendSource((PlaneverbDSP::EmissionID)emissionID,
 			&input, in, (unsigned)numFrames);

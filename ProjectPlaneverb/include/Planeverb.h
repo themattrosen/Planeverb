@@ -3,6 +3,7 @@
 
 #include "PvDefinitions.h"
 #include "PvTypes.h"
+#include <utility>
 
 namespace Planeverb
 {
@@ -41,5 +42,8 @@ namespace Planeverb
 
 	// Updates listener
 	PV_API void SetListenerPosition(const vec3& listenerPosition);
+
+	// Retrieves an Impulse Response for debugging purposes.
+	PV_API std::pair<const Cell*, unsigned> GetImpulseResponse(const vec3& position);
 	
 } // namespace Planeverb

@@ -12,6 +12,10 @@ namespace PlaneverbDSP
 	// Shuts down the Planeverb DSP module
 	PV_DSP_API void Exit();
 
+	PV_DSP_API void UpdateEmitter(EmissionID id, float forwardX, float forwardY, float forwardZ);
+
+	PV_DSP_API void SetEmitterDirectivityPattern(EmissionID id, PlaneverbDSPSourceDirectivityPattern pattern);
+
 	// Updates listener transform, needs world position and forward vector
 	PV_DSP_API void SetListenerTransform(float posX, float posY, float posZ,
 		float forwardX, float forwardY, float forwardZ);

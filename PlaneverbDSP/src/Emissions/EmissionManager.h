@@ -13,11 +13,17 @@ namespace PlaneverbDSP
 		float occlusion = 1.f;						// occlusion parameter
 		float rt60 = 0.f;							// decay time parameter
 		vec2 direction = { 0, 0 };					// direction parameter
+		vec2 forward = { 0, 0 };					// source directivity parameter
+		vec2 directivity = { 0, 0 };
+		PlaneverbDSPSourceDirectivityPattern directivityPattern;
 		EmissionData(float samplingRate) :
 			lpf{ {samplingRate}, {samplingRate} },
 			occlusion(1.f),
 			rt60(0.f),
-			direction{ 0, 0 }
+			direction{ 0, 0 },
+			forward{ 0, 0 },
+			directivity{ 0, 0 },
+			directivityPattern(pvd_Cardioid)
 		{}
 	};
 

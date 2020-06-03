@@ -9,6 +9,8 @@
 #include <PlaneverbDSP.h>
 #include <string>
 #include <filesystem>
+#include <thread>
+#include <chrono>
 
 void Editor::Init(GLFWwindow * window)
 {
@@ -29,12 +31,21 @@ void Editor::Init(GLFWwindow * window)
 	m_windowFlags.audioWindow = true;
 	m_windowFlags.gridWindow = true;
 	m_windowFlags.analyzerWindow = true;
+	m_windowFlags.IRWindow = true;
 	
 	m_listener = Planeverb::vec3(5.f, 0.f, 4.f);
 	m_emitter = Planeverb::vec3(5.f, 0.f, 6.f);
 	Planeverb::SetListenerPosition(m_listener);
 	PlaneverbDSP::SetListenerTransform(m_listener.x, m_listener.y, m_listener.z,
 		0, 0, 1);
+	PlaneverbDSP::UpdateEmitter(m_emitterID, 1, 0, 0);
+	PlaneverbDSP::SetEmitterDirectivityPattern(m_emitterID, PlaneverbDSP::pvd_Cardioid);
+	using namespace std::chrono_literals;
+	std::this_thread::sleep_for(2s);
+	auto pair = Planeverb::GetImpulseResponse(m_listener);
+	m_impulseResponseLength = pair.second;
+	m_impulseResponseCopy.resize(m_impulseResponseLength);
+	std::memcpy(&m_impulseResponseCopy.front(), pair.first, sizeof(Planeverb::Cell) * m_impulseResponseLength);
 }
 
 void Editor::Update()
@@ -69,6 +80,7 @@ void Editor::WindowUpdate()
 	ShowAudioWindow();
 	ShowGridWindow();
 	ShowAnalyzerWindow();
+	ShowIRWindow();
 }
 
 void Editor::MenuUpdate()
@@ -81,6 +93,7 @@ void Editor::MenuUpdate()
 			ImGui::MenuItem("Transport Window", NULL, &m_windowFlags.audioWindow);
 			ImGui::MenuItem("Grid Viewer", NULL, &m_windowFlags.gridWindow);
 			ImGui::MenuItem("Analyzer Window", NULL, &m_windowFlags.analyzerWindow);
+			ImGui::MenuItem("IR Window", NULL, &m_windowFlags.IRWindow);
 			
 			ImGui::Separator();
 
@@ -378,7 +391,6 @@ void Editor::ShowAnalyzerWindow()
 
 	if (ImGui::Begin("Analyzer Window", &m_windowFlags.analyzerWindow))
 	{
-		
 		Planeverb::PlaneverbOutput result;
 		result.occlusion = Planeverb::PV_INVALID_DRY_GAIN;
 
@@ -394,6 +406,7 @@ void Editor::ShowAnalyzerWindow()
 			ImGui::Text("Lowpass   : ");
 			ImGui::Text("RT60      : ");
 			ImGui::Text("Direction : ");
+			ImGui::Text("Src Dir   : ");
 		}
 		else
 		{
@@ -401,7 +414,38 @@ void Editor::ShowAnalyzerWindow()
 			ImGui::Text("Lowpass   : %f", result.lowpass);
 			ImGui::Text("RT60      : %f", result.rt60);
 			ImGui::Text("Direction : (%f, %f)", result.direction.x, result.direction.y);
+			ImGui::Text("Src Dir   : (%f, %f)", result.sourceDirectivity.x, result.sourceDirectivity.y);
 		}
+
+		ImGui::End();
+	}
+}
+
+static float IRGetter(void* data, int idx)
+{
+	const Planeverb::Cell* response = reinterpret_cast<const Planeverb::Cell*>(data);
+	return response[idx].pr;
+}
+
+void Editor::ShowIRWindow()
+{
+	if (!m_windowFlags.IRWindow)
+		return;
+
+	if (ImGui::Begin("IR Window", &m_windowFlags.IRWindow))
+	{
+		std::pair<const Planeverb::Cell*, unsigned> IR = Planeverb::GetImpulseResponse(m_emitter);
+		std::memcpy(&m_impulseResponseCopy.front(), IR.first, sizeof(Planeverb::Cell) * m_impulseResponseLength);
+
+		if (IR.second != m_impulseResponseLength)
+		{
+			ImGui::Text("Something went wrong with the IR length");
+			ImGui::End();
+			return;
+		}
+
+		ImGui::PlotLines("Impulse Response", IRGetter, &m_impulseResponseCopy.front(), m_impulseResponseLength,
+			0, "", -1.f, 1.f, ImGui::GetWindowSize());
 
 		ImGui::End();
 	}
@@ -495,7 +539,7 @@ void Editor::DisplayEmitterAndListener(ImDrawList * drawList, const ImVec2 & off
 	static const ImVec2 BUTTON_SIZE(25.f, 25.f);
 	static const ImU32 HOVERED_COLOR = IM_COL32(0, 255, 0, 150);
 	static const ImU32 NORMAL_COLOR = IM_COL32(25, 100, 25, 150);
-	static const ImU32 LISTENER_COLOR = IM_COL32(100, 25, 25, 150);
+	static const ImU32 LISTENER_COLOR = IM_COL32(175, 25, 25, 150);
 	static const ImU32 LISTENER_HOVERED = IM_COL32(255, 0, 0, 150);
 	static const float BUTTON_RADIUS = 10.f;
 
@@ -538,11 +582,18 @@ void Editor::DisplayEmitterAndListener(ImDrawList * drawList, const ImVec2 & off
 		m_emitter.x += delta.x / GRID_TO_WORLD_SCALE;
 		m_emitter.z += delta.y / GRID_TO_WORLD_SCALE;
 		Planeverb::UpdateEmission(m_emitterID, m_emitter);
+		PlaneverbDSP::UpdateEmitter(m_emitterID, 1, 0, 0);
+		PlaneverbDSP::SetEmitterDirectivityPattern(m_emitterID, PlaneverbDSP::pvd_Cardioid);
 	}
 
 	if (m_emitterID != Planeverb::PV_INVALID_EMISSION_ID)
 	{
+		const ImVec2 emitterForward(1, 0);
+		const ImVec2 listenerForward(0, -1);
 		auto output = Planeverb::GetOutput(m_emitterID);
-		drawList->AddLine(listenerPos, listenerPos + (ImVec2(output.direction.x, output.direction.y) * 50), HOVERED_COLOR);
+		drawList->AddLine(listenerPos, listenerPos + (ImVec2(output.direction.x, output.direction.y) * 50), LISTENER_HOVERED);
+		drawList->AddLine(listenerPos, listenerPos + (listenerForward * 50), HOVERED_COLOR);
+		drawList->AddLine(emitterPos, emitterPos + (ImVec2(output.sourceDirectivity.x, output.sourceDirectivity.y) * 50), LISTENER_HOVERED);
+		drawList->AddLine(emitterPos, emitterPos + (emitterForward * 50), HOVERED_COLOR);
 	}
 }

@@ -147,6 +147,8 @@ void AudioCore::ProcessBlock(float * out, int frames)
 		dspInput.rt60 = pvoutput.rt60;
 		dspInput.direction.x = pvoutput.direction.x;
 		dspInput.direction.y = pvoutput.direction.y;
+		dspInput.sourceDirectivity.x = pvoutput.sourceDirectivity.x;
+		dspInput.sourceDirectivity.y = pvoutput.sourceDirectivity.y;
 
 		float* dataArray = m_data.dataPlaying->data;
 		float* outStart = out;
@@ -161,7 +163,7 @@ void AudioCore::ProcessBlock(float * out, int frames)
 			m_data.currentlyPlaying = false;
 			Planeverb::EndEmission(m_data.id);
 		}
-
+		
 		//std::memcpy(out, dataArray, samplesToCopy * sizeof(float));
 		PlaneverbDSP::SendSource(m_data.id, &dspInput, dataArray, samplesToCopy / CHANNELS);
 		//std::memset(out, 0, sizeof(float) * samples);

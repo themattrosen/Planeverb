@@ -12,6 +12,8 @@ namespace Planeverb
 		public float lowpass;
 		public float directionX;
 		public float directionY;
+		public float sourceDirectionX;
+		public float sourceDirectionY;
 	}
 
 	[AddComponentMenu("Planeverb/DSP/PlaneverbDSPContext")]
@@ -30,6 +32,13 @@ namespace Planeverb
 		[DllImport(DLLNAME)]
 		private static extern void PlaneverbDSPSetListenerTransform(float posX, float posY, float posZ,
 		float forwardX, float forwardY, float forwardZ);
+
+		[DllImport(DLLNAME)]
+		private static extern void PlaneverbDSPUpdateEmitter(int emissionID, 
+			float forwardX, float forwardY, float forwardZ);
+
+		[DllImport(DLLNAME)]
+		private static extern void PlaneverbDSPSetEmitterDirectivityPattern(int emissionId, int pattern);
 
 		[DllImport(DLLNAME)]
 		private static extern void PlaneverbDSPSendSource(int emissionID, in PlaneverbDSPInput dspParams,
@@ -83,6 +92,16 @@ namespace Planeverb
 		{
 			PlaneverbDSPSetListenerTransform(position.x, position.y, position.z,
 				forward.x, forward.y, forward.z);
+		}
+
+		public static void UpateEmitter(int id, Vector3 forward)
+		{
+			PlaneverbDSPUpdateEmitter(id, forward.x, forward.y, forward.z);
+		}
+
+		public static void SetEmitterDirectivityPattern(int id, PlaneverbSourceDirectivityPattern pattern)
+		{
+			PlaneverbDSPSetEmitterDirectivityPattern(id, (int)pattern);
 		}
 
 		public static void SendSource(int id, in PlaneverbDSPInput param, float[] data, int numSamples, int channels)

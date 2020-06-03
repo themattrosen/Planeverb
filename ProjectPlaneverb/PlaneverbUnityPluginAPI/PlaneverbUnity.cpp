@@ -83,6 +83,8 @@ extern "C"
 		float lowpass;
 		float directionX;
 		float directionY;
+		float sourceDirectionX;
+		float sourceDirectionY;
 	};
 
 	PVU_EXPORT PlaneverbOutput PVU_CC
@@ -95,6 +97,8 @@ extern "C"
 		output.lowpass = poutput.lowpass;
 		output.directionX = poutput.direction.x;
 		output.directionY = poutput.direction.y;
+		output.sourceDirectionX = poutput.sourceDirectivity.x;
+		output.sourceDirectionY = poutput.sourceDirectivity.y;
 		return output;
 	}
 
