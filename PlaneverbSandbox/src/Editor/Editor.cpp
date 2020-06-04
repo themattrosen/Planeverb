@@ -41,7 +41,7 @@ void Editor::Init(GLFWwindow * window)
 	PlaneverbDSP::UpdateEmitter(m_emitterID, 1, 0, 0);
 	PlaneverbDSP::SetEmitterDirectivityPattern(m_emitterID, PlaneverbDSP::pvd_Cardioid);
 	using namespace std::chrono_literals;
-	std::this_thread::sleep_for(2s);
+	std::this_thread::sleep_for(100ms);
 	auto pair = Planeverb::GetImpulseResponse(m_listener);
 	m_impulseResponseLength = pair.second;
 	m_impulseResponseCopy.resize(m_impulseResponseLength);
@@ -346,6 +346,15 @@ ImVec2 operator*(const ImVec2& lhs, const float& rhs)
 	return ImVec2(lhs.x * rhs, lhs.y * rhs);
 }
 
+void Normalize(ImVec2& v)
+{
+	float f = v.x * v.x + v.y * v.y;
+	if (!f) return;
+	else f = std::sqrt(f);
+	v.x /= f;
+	v.y /= f;
+}
+
 void Editor::ShowGridWindow()
 {
 	if (!m_windowFlags.gridWindow)
@@ -424,7 +433,14 @@ void Editor::ShowAnalyzerWindow()
 static float IRGetter(void* data, int idx)
 {
 	const Planeverb::Cell* response = reinterpret_cast<const Planeverb::Cell*>(data);
-	return response[idx].pr * 2;
+	return response[idx].pr * 5;
+}
+
+static float IRDBGetter(void* data, int idx)
+{
+	const Planeverb::Cell* response = reinterpret_cast<const Planeverb::Cell*>(data);
+	float pr = response[idx].pr;
+	return 10.f * std::log10(pr * pr);
 }
 
 void Editor::ShowIRWindow()
@@ -445,7 +461,12 @@ void Editor::ShowIRWindow()
 		}
 
 		ImGui::PlotLines("Impulse Response", IRGetter, &m_impulseResponseCopy.front(), m_impulseResponseLength,
-			0, "", -1.f, 1.f, ImGui::GetWindowSize());
+			0, "", -1.f, 1.f, ImVec2(ImGui::GetWindowWidth(), 150));
+
+		ImGui::Separator();
+
+		ImGui::PlotLines("Impulse Response (DB)", IRDBGetter, &m_impulseResponseCopy.front(), m_impulseResponseLength,
+			0, "", -96, 0.f, ImVec2(ImGui::GetWindowWidth(), 150));
 
 		ImGui::End();
 	}
@@ -542,6 +563,8 @@ void Editor::DisplayEmitterAndListener(ImDrawList * drawList, const ImVec2 & off
 	static const ImU32 LISTENER_COLOR = IM_COL32(175, 25, 25, 150);
 	static const ImU32 LISTENER_HOVERED = IM_COL32(255, 0, 0, 150);
 	static const float BUTTON_RADIUS = 10.f;
+	static const ImVec2 emitterForward(1, 0);
+	static const ImVec2 listenerForward(0, -1);
 
 	ImVec2 listenerPos = offset + (ImVec2(m_listener.x, m_listener.z) * GRID_TO_WORLD_SCALE);
 	ImVec2 listenerRectMin = listenerPos - (BUTTON_SIZE * 0.5f);
@@ -551,10 +574,29 @@ void Editor::DisplayEmitterAndListener(ImDrawList * drawList, const ImVec2 & off
 	ImGui::SetCursorScreenPos(listenerRectMin);
 	ImGui::InvisibleButton("listener", BUTTON_SIZE);
 	bool isHovered = ImGui::IsItemHovered();
+	ImVec2 perp = listenerPos + listenerForward;
+	Normalize(perp);
+
+	ImVec2 left{ perp.y, perp.x };
+	ImVec2 right{ perp.y, -perp.x };
 	if (isHovered)
-		drawList->AddCircleFilled(listenerPos, BUTTON_RADIUS, LISTENER_HOVERED);
+	{
+		ImGui::SetCursorScreenPos(listenerPos + (BUTTON_SIZE * 0.5f));
+		ImGui::Text("Listener");
+		//drawList->AddCircleFilled(listenerPos, BUTTON_RADIUS, LISTENER_HOVERED);
+		
+		//drawList->AddTriangleFilled((listenerPos + perp) * 20, (listenerPos + left) * 10, (listenerPos + right) * 10, LISTENER_HOVERED);
+		drawList->AddTriangleFilled(listenerPos + ImVec2(0, -30), listenerPos + ImVec2(10, 0), listenerPos + ImVec2(-10, 0), LISTENER_HOVERED);
+	}
 	else
-		drawList->AddCircleFilled(listenerPos, BUTTON_RADIUS, LISTENER_COLOR);
+	{
+		ImGui::SetCursorScreenPos(listenerPos + (BUTTON_SIZE * 0.5f));
+		ImGui::TextDisabled("Listener");
+		//drawList->AddCircleFilled(listenerPos, BUTTON_RADIUS, LISTENER_COLOR);
+		//drawList->AddTriangleFilled((listenerPos + perp) * 20, (listenerPos + left) * 10, (listenerPos + right) * 10, LISTENER_COLOR);
+		drawList->AddTriangleFilled(listenerPos + ImVec2(0, -30), listenerPos + ImVec2(10, 0), listenerPos + ImVec2(-10, 0), LISTENER_COLOR);
+
+	}
 
 	if (isHovered && ImGui::IsMouseDragging())
 	{
@@ -571,9 +613,21 @@ void Editor::DisplayEmitterAndListener(ImDrawList * drawList, const ImVec2 & off
 	ImGui::InvisibleButton("emitter", BUTTON_SIZE);
 	isHovered = ImGui::IsItemHovered();
 	if (isHovered)
-		drawList->AddCircleFilled(emitterPos, BUTTON_RADIUS, HOVERED_COLOR);
+	{
+		ImGui::SetCursorScreenPos(emitterPos + (BUTTON_SIZE * 0.5f));
+		ImGui::Text("Emitter");
+		//drawList->AddCircleFilled(emitterPos, BUTTON_RADIUS, HOVERED_COLOR);
+		drawList->AddTriangleFilled(emitterPos + ImVec2(30, 0), emitterPos + ImVec2(0, 10), emitterPos + ImVec2(0, -10), HOVERED_COLOR);
+
+	}
 	else
-		drawList->AddCircleFilled(emitterPos, BUTTON_RADIUS, NORMAL_COLOR);
+	{
+		ImGui::SetCursorScreenPos(emitterPos + (BUTTON_SIZE * 0.5f));
+		ImGui::TextDisabled("Emitter");
+		//drawList->AddCircleFilled(emitterPos, BUTTON_RADIUS, NORMAL_COLOR);
+		drawList->AddTriangleFilled(emitterPos + ImVec2(30, 0), emitterPos + ImVec2(0, 10), emitterPos + ImVec2(0, -10), NORMAL_COLOR);
+
+	}
 
 	if (isHovered && ImGui::IsMouseDragging())
 	{
@@ -588,12 +642,10 @@ void Editor::DisplayEmitterAndListener(ImDrawList * drawList, const ImVec2 & off
 
 	if (m_emitterID != Planeverb::PV_INVALID_EMISSION_ID)
 	{
-		const ImVec2 emitterForward(1, 0);
-		const ImVec2 listenerForward(0, -1);
 		auto output = Planeverb::GetOutput(m_emitterID);
-		drawList->AddLine(listenerPos, listenerPos + (ImVec2(output.direction.x, output.direction.y) * 50), LISTENER_HOVERED);
-		drawList->AddLine(listenerPos, listenerPos + (listenerForward * 50), HOVERED_COLOR);
-		drawList->AddLine(emitterPos, emitterPos + (ImVec2(output.sourceDirectivity.x, output.sourceDirectivity.y) * 50), LISTENER_HOVERED);
-		drawList->AddLine(emitterPos, emitterPos + (emitterForward * 50), HOVERED_COLOR);
+		drawList->AddLine(listenerPos, listenerPos + (ImVec2(output.direction.x, output.direction.y) * 50), HOVERED_COLOR);
+		//drawList->AddLine(listenerPos, listenerPos + (listenerForward * 50), HOVERED_COLOR);
+		drawList->AddLine(emitterPos, emitterPos + (ImVec2(output.sourceDirectivity.x, output.sourceDirectivity.y) * 50), HOVERED_COLOR);
+		//drawList->AddLine(emitterPos, emitterPos + (emitterForward * 50), HOVERED_COLOR);
 	}
 }
