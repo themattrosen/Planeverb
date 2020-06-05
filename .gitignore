@@ -35,3 +35,6 @@ bin-int/
 .vs/
 *.user
 *.dat
+
+# profiling data
+*.vspx

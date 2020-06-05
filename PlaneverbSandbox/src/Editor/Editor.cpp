@@ -93,7 +93,7 @@ void Editor::MenuUpdate()
 			ImGui::MenuItem("Transport Window", NULL, &m_windowFlags.audioWindow);
 			ImGui::MenuItem("Grid Viewer", NULL, &m_windowFlags.gridWindow);
 			ImGui::MenuItem("Analyzer Window", NULL, &m_windowFlags.analyzerWindow);
-			ImGui::MenuItem("IR Window", NULL, &m_windowFlags.IRWindow);
+			ImGui::MenuItem("Impulse Response", NULL, &m_windowFlags.IRWindow);
 			
 			ImGui::Separator();
 
@@ -412,18 +412,20 @@ void Editor::ShowAnalyzerWindow()
 		if (result.occlusion == Planeverb::PV_INVALID_DRY_GAIN)
 		{
 			ImGui::Text("Dry Gain  : ");
-			ImGui::Text("Lowpass   : ");
+            ImGui::Text("Wet Gain   : ");
+            //ImGui::Text("Lowpass   : ");
 			ImGui::Text("RT60      : ");
-			ImGui::Text("Direction : ");
-			ImGui::Text("Src Dir   : ");
+			ImGui::Text("Listener Dir : ");
+			ImGui::Text("Source Dir   : ");
 		}
 		else
 		{
-			ImGui::Text("Dry Gain  : %f", result.occlusion);
-			ImGui::Text("Lowpass   : %f", result.lowpass);
+            ImGui::Text("Dry Gain  : %f", result.occlusion);
+            ImGui::Text("Wet Gain  : %f", result.wetGain);
+			//ImGui::Text("Lowpass   : %f", result.lowpass);
 			ImGui::Text("RT60      : %f", result.rt60);
-			ImGui::Text("Direction : (%f, %f)", result.direction.x, result.direction.y);
-			ImGui::Text("Src Dir   : (%f, %f)", result.sourceDirectivity.x, result.sourceDirectivity.y);
+			ImGui::Text("Listener Dir : (%f, %f)", result.direction.x, result.direction.y);
+			ImGui::Text("Source Dir   : (%f, %f)", result.sourceDirectivity.x, result.sourceDirectivity.y);
 		}
 
 		ImGui::End();
@@ -497,7 +499,7 @@ void Editor::DisplayAABBs(ImDrawList * drawList, const ImVec2 & offset)
 	static const ImVec2 NODE_WINDOW_PADDING{ 8.f, 8.f };
 	static const ImU32 NODE_BORDER_COLOR = IM_COL32(200, 200, 100, 255);
 
-	drawList->AddRect(ImVec2(0, 0) + offset, (ImVec2(10, 10) * GRID_TO_WORLD_SCALE) + offset, NODE_BORDER_COLOR);
+	drawList->AddRect(ImVec2(0, 0) + offset, (ImVec2(25, 25) * GRID_TO_WORLD_SCALE) + offset, NODE_BORDER_COLOR);
 
 	for (auto& pair : m_geometry)
 	{
@@ -571,9 +573,10 @@ void Editor::DisplayEmitterAndListener(ImDrawList * drawList, const ImVec2 & off
 	ImVec2 emitterPos = offset + (ImVec2(m_emitter.x, m_emitter.z) * GRID_TO_WORLD_SCALE);
 	ImVec2 emitterRectMin = emitterPos - (BUTTON_SIZE * 0.5f);
 
+    ImGui::SetWindowFontScale(2.0f);
 	ImGui::SetCursorScreenPos(listenerRectMin);
 	ImGui::InvisibleButton("listener", BUTTON_SIZE);
-	bool isHovered = ImGui::IsItemHovered();
+    bool isHovered = ImGui::IsItemHovered(); 
 	ImVec2 perp = listenerPos + listenerForward;
 	Normalize(perp);
 
@@ -591,10 +594,10 @@ void Editor::DisplayEmitterAndListener(ImDrawList * drawList, const ImVec2 & off
 	else
 	{
 		ImGui::SetCursorScreenPos(listenerPos + (BUTTON_SIZE * 0.5f));
-		ImGui::TextDisabled("Listener");
+		ImGui::Text("Listener");
 		//drawList->AddCircleFilled(listenerPos, BUTTON_RADIUS, LISTENER_COLOR);
 		//drawList->AddTriangleFilled((listenerPos + perp) * 20, (listenerPos + left) * 10, (listenerPos + right) * 10, LISTENER_COLOR);
-		drawList->AddTriangleFilled(listenerPos + ImVec2(0, -30), listenerPos + ImVec2(10, 0), listenerPos + ImVec2(-10, 0), LISTENER_COLOR);
+		drawList->AddTriangleFilled(listenerPos + ImVec2(0, -30), listenerPos + ImVec2(10, 0), listenerPos + ImVec2(-10, 0), LISTENER_HOVERED);
 
 	}
 
@@ -615,7 +618,7 @@ void Editor::DisplayEmitterAndListener(ImDrawList * drawList, const ImVec2 & off
 	if (isHovered)
 	{
 		ImGui::SetCursorScreenPos(emitterPos + (BUTTON_SIZE * 0.5f));
-		ImGui::Text("Emitter");
+		ImGui::Text("Source");
 		//drawList->AddCircleFilled(emitterPos, BUTTON_RADIUS, HOVERED_COLOR);
 		drawList->AddTriangleFilled(emitterPos + ImVec2(30, 0), emitterPos + ImVec2(0, 10), emitterPos + ImVec2(0, -10), HOVERED_COLOR);
 
@@ -623,9 +626,9 @@ void Editor::DisplayEmitterAndListener(ImDrawList * drawList, const ImVec2 & off
 	else
 	{
 		ImGui::SetCursorScreenPos(emitterPos + (BUTTON_SIZE * 0.5f));
-		ImGui::TextDisabled("Emitter");
+		ImGui::Text("Source");
 		//drawList->AddCircleFilled(emitterPos, BUTTON_RADIUS, NORMAL_COLOR);
-		drawList->AddTriangleFilled(emitterPos + ImVec2(30, 0), emitterPos + ImVec2(0, 10), emitterPos + ImVec2(0, -10), NORMAL_COLOR);
+		drawList->AddTriangleFilled(emitterPos + ImVec2(30, 0), emitterPos + ImVec2(0, 10), emitterPos + ImVec2(0, -10), HOVERED_COLOR);
 
 	}
 
@@ -643,9 +646,9 @@ void Editor::DisplayEmitterAndListener(ImDrawList * drawList, const ImVec2 & off
 	if (m_emitterID != Planeverb::PV_INVALID_EMISSION_ID)
 	{
 		auto output = Planeverb::GetOutput(m_emitterID);
-		drawList->AddLine(listenerPos, listenerPos + (ImVec2(output.direction.x, output.direction.y) * 50), HOVERED_COLOR);
+		drawList->AddLine(listenerPos, listenerPos + (ImVec2(output.direction.x, output.direction.y) * 50), HOVERED_COLOR, 3.0f);
 		//drawList->AddLine(listenerPos, listenerPos + (listenerForward * 50), HOVERED_COLOR);
-		drawList->AddLine(emitterPos, emitterPos + (ImVec2(output.sourceDirectivity.x, output.sourceDirectivity.y) * 50), HOVERED_COLOR);
+		drawList->AddLine(emitterPos, emitterPos + (ImVec2(output.sourceDirectivity.x, output.sourceDirectivity.y) * 50), HOVERED_COLOR, 3.0f);
 		//drawList->AddLine(emitterPos, emitterPos + (emitterForward * 50), HOVERED_COLOR);
 	}
 }

@@ -13,6 +13,7 @@ namespace Planeverb
 	struct AnalyzerResult
 	{
 		Real occlusion;
+        Real wetGain;
 		Real rt60;
 		Real lowpassIntensity;
 		vec2 direction;
@@ -26,17 +27,13 @@ namespace Planeverb
 		Analyzer(Grid* grid, FreeGrid* freeGrid, char* mem);
 		~Analyzer();
 
-		void AnalyzeResponses(const vec3& listenerPos);
+        void AnalyzeResponses(const vec3& listenerPos);
 		const AnalyzerResult* GetResponseResult(const vec3& emitterPos) const;
 		static unsigned GetMemoryRequirement(const struct PlaneverbConfig* config);
 
 	private:
-		Real AnalyzeOcclusion(unsigned index, const Cell* response, const vec3& listenerPos, unsigned numSamples);
-		Real AnalyzeLowpassIntensity(unsigned index, const Cell* response, const vec3& listenerPos, unsigned numSamples);
-		Real AnalyzeDecayTime(unsigned index, const Cell* response, unsigned numSamples);
-		Real AnalyzeDelay(unsigned index, const Cell* response, unsigned numSamples);
-		vec2 AnalyzeDirection(unsigned index, const Cell* response, const vec3& listenerPos, unsigned numSamples);
-		vec2 AnalyzeSourceDirection(unsigned index, const Cell* response, unsigned numSamples);
+        void EncodeResponse(unsigned serialIndex, vec2 gridIndex, const Cell* response, const vec3& listenerPos, unsigned numSamples);
+		vec2 EncodeListenerDirection(unsigned index, const Cell* response, const vec3& listenerPos, unsigned numSamples);
 		char* m_mem;				// pool of memory
 		AnalyzerResult* m_results;	// 2D grid using 1D memory, grid of results
 		Real* m_delaySamples;		// grid of delay, to be used to find direction

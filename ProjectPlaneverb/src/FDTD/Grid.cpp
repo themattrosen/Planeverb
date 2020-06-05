@@ -9,17 +9,18 @@ namespace Planeverb
 	namespace
 	{
 		// Fill a given array with a precomputed Gaussian pulse
-		void GaussianPulse(Real* out, unsigned numSamples, Real dt = 0)
+		void GaussianPulse(const PlaneverbConfig* config, float samplingRate, Real* out, unsigned numSamples)
 		{
-			// using the formula y = e^(-(t-20)^2 / 100))
-			// use the formula G(t) = e^(-(t-5s)^2 / s^2), s = 10dt
-			const Real delay = (Real)20.f;
-			const Real sigma = (Real)10.f;
-			//const Real sigma = Real(10.0) * dt;
-			//const Real delay = Real(5.0) * sigma;
-			for (unsigned i = 0; i < numSamples; ++i)
+            const float maxFreq = Real(config->gridResolution);
+            const float pi = std::acos(-1);
+            float sigma = 1.0f / (0.5 * pi * maxFreq);
+
+			const float delay = 2*sigma;
+            const float dt = 1.0f / samplingRate;
+
+            for (unsigned i = 0; i < numSamples; ++i)
 			{
-				Real t = (Real)i;
+				Real t = (Real)i * dt;
 				Real val = std::exp(-(t - delay) * (t - delay) / (sigma * sigma));
 				*out++ = val;
 			}
@@ -125,7 +126,7 @@ namespace Planeverb
 		}
 		
 		// precompute Gaussian pulse
-		GaussianPulse(m_pulse, m_responseLength);
+		GaussianPulse(config, m_samplingRate, m_pulse, m_responseLength);
 	}
 
 	Grid::~Grid()
@@ -362,7 +363,7 @@ namespace Planeverb
 	{
 		Real minWavelength = PV_C / (Real)resolution;
 		dx = minWavelength / PV_POINTS_PER_WAVELENGTH;
-		dt = dx / (PV_C * 2.25);
+		dt = dx / (PV_C * Real(2.25));
 		samplingRate = (unsigned)(Real(1.0) / dt);
 	}
 } // namespace Planeverb
