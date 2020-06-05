@@ -63,6 +63,7 @@ namespace Planeverb
 	struct PlaneverbOutput
 	{
 		float occlusion;
+        float wetGain;
 		float rt60;
 		float lowpass;
 		vec2 direction;

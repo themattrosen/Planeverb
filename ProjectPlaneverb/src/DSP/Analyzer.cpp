@@ -98,7 +98,7 @@ namespace Planeverb
 			gridIndex.y = (Real)gridY;
 			const Cell* response = m_grid->GetResponse(gridIndex);
 
-			// analyze for direction
+			// analyze for listener direction
 			m_results[i].direction = EncodeListenerDirection(i, response, listenerPos, m_responseLength);
 		}
 	}
@@ -228,6 +228,23 @@ namespace Planeverb
         // Find LPF cutoff frequency by feeding into equation: y = -147 + (18390) / (1 + (x / 12)^0.8 )
         m_results[serialIndex].lowpassIntensity = 
             (Real)-147.f + ((Real)18390.f) / ((Real)1.f + std::pow(r / (Real)12.f, (Real)0.8f));
+
+        //
+        // Wet gain
+        //
+        Real wetEnergy = 0.0f;
+        {
+            const int wetGainSamples = (int)(PV_WET_GAIN_ANALYSIS_LENGTH * (Real)m_samplingRate);
+            const int end = std::min(directEnd + 1 + wetGainSamples, numSamples);
+            for (int j = directEnd + 1; j < end; j++)
+            {
+                const float p = response[j].pr;
+                wetEnergy += p * p;
+            }
+        }
+
+        // Normalize as if source had unit energy at 1m distance
+        m_results[serialIndex].wetGain = std::sqrt(wetEnergy / m_freeGrid->GetEnergyAtOneMeter());
 
         //
         // Decay Time

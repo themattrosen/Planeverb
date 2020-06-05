@@ -13,6 +13,7 @@ namespace Planeverb
 	struct AnalyzerResult
 	{
 		Real occlusion;
+        Real wetGain;
 		Real rt60;
 		Real lowpassIntensity;
 		vec2 direction;
