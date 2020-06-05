@@ -86,7 +86,7 @@ namespace Planeverb
 	const constexpr Real PV_INV_Z_AIR = (Real)1.f / PV_Z_AIR;			// inverse impedance for absorbing boundaries
 	const constexpr Real PV_INV_Z_REFLECT = (Real)0.0f;					// inverse impedance for reflecting boundaries
 	const constexpr Real PV_AUDIBLE_THRESHOLD_GAIN = (Real)0.00000316f;	// precalculated -110 dB converted to linear gain
-    const constexpr Real PV_DRY_DIRECTION_ANALYSIS_LENGTH = (Real)0.001f;// length of time flux of first wavefront (source direction)
+    const constexpr Real PV_DRY_DIRECTION_ANALYSIS_LENGTH = (Real)0.005f;// length of time flux of first wavefront (source direction)
     const constexpr Real PV_DRY_GAIN_ANALYSIS_LENGTH = (Real)0.01f;		// length of time to process the initial pulse for occlusion
 	const constexpr Real PV_WET_GAIN_ANALYSIS_LENGTH = (Real)0.080f;	// length of time to process early reflections
 	const constexpr Real PV_SQRT_2 = (Real)1.4142136f;					// precalculated sqrt(2)

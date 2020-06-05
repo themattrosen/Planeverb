@@ -13,7 +13,7 @@ namespace Planeverb
 		{
             const float maxFreq = Real(config->gridResolution);
             const float pi = std::acos(-1);
-            float sigma = 1.0f / (0.75 * pi * maxFreq);
+            float sigma = 1.0f / (0.5 * pi * maxFreq);
 
 			const float delay = 2*sigma;
             const float dt = 1.0f / samplingRate;
