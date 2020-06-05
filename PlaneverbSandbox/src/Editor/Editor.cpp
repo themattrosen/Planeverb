@@ -412,21 +412,21 @@ void Editor::ShowAnalyzerWindow()
 
 		if (result.occlusion == Planeverb::PV_INVALID_DRY_GAIN)
 		{
-			ImGui::Text("Dry Gain  : ");
-            ImGui::Text("Wet Gain   : ");
+			ImGui::Text("Dry Gain (dB) : ");
+            ImGui::Text("Wet Gain (dB) : ");
             //ImGui::Text("Lowpass   : ");
-			ImGui::Text("RT60      : ");
-			ImGui::Text("Listener Dir : ");
-			ImGui::Text("Source Dir   : ");
+			ImGui::Text("RT60 (s)      : ");
+			ImGui::Text("Listener Dir  : ");
+			ImGui::Text("Source Dir    : ");
 		}
 		else
 		{
-            ImGui::Text("Dry Gain  : %f", result.occlusion);
-            ImGui::Text("Wet Gain  : %f", result.wetGain);
+            ImGui::Text("Dry Gain (dB) : %.1f", 10.0f * std::log10(result.occlusion * result.occlusion));
+            ImGui::Text("Wet Gain (dB) : %.1f", 10.0f * std::log10(result.wetGain * result.wetGain));
 			//ImGui::Text("Lowpass   : %f", result.lowpass);
-			ImGui::Text("RT60      : %f", result.rt60);
-			ImGui::Text("Listener Dir : (%f, %f)", result.direction.x, result.direction.y);
-			ImGui::Text("Source Dir   : (%f, %f)", result.sourceDirectivity.x, result.sourceDirectivity.y);
+			ImGui::Text("RT60 (s)      : %.2f", result.rt60);
+			ImGui::Text("Listener Dir  : (%.3f, %.3f)", result.direction.x, result.direction.y);
+			ImGui::Text("Source Dir    : (%.3f, %.3f)", result.sourceDirectivity.x, result.sourceDirectivity.y);
 		}
 
 		ImGui::End();
@@ -465,7 +465,7 @@ void Editor::ShowIRWindow()
 		}
 
 		ImGui::PlotLines("Impulse Response", IRGetter, &m_impulseResponseCopy.front(), m_impulseResponseLength,
-			0, "", -1.f, 1.f, ImVec2(ImGui::GetWindowWidth(), 150));
+			0, "", -0.5f, 0.5f, ImVec2(ImGui::GetWindowWidth(), 150));
 
 		ImGui::Separator();
 
