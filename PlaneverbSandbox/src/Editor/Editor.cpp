@@ -398,16 +398,17 @@ void Editor::ShowAnalyzerWindow()
 	if (!m_windowFlags.analyzerWindow)
 		return;
 
-	if (ImGui::Begin("Analyzer Window", &m_windowFlags.analyzerWindow))
+	if (ImGui::Begin("Acoustic Parameters", &m_windowFlags.analyzerWindow))
 	{
+        ImGui::SetWindowFontScale(2.0f);
 		Planeverb::PlaneverbOutput result;
 		result.occlusion = Planeverb::PV_INVALID_DRY_GAIN;
 
 		if(m_emitterID != Planeverb::PV_INVALID_EMISSION_ID)
 			result = Planeverb::GetOutput(m_emitterID);
 		
-		ImGui::Text("Analyzer Result for Emitter Position (%f, %f)", m_emitter.x, m_emitter.z);
-		ImGui::Separator();
+		//ImGui::Text("Analyzer Result for Emitter Position (%f, %f)", m_emitter.x, m_emitter.z);
+		//ImGui::Separator();
 
 		if (result.occlusion == Planeverb::PV_INVALID_DRY_GAIN)
 		{
@@ -450,8 +451,9 @@ void Editor::ShowIRWindow()
 	if (!m_windowFlags.IRWindow)
 		return;
 
-	if (ImGui::Begin("IR Window", &m_windowFlags.IRWindow))
+	if (ImGui::Begin("Impulse Response", &m_windowFlags.IRWindow))
 	{
+        ImGui::SetWindowFontScale(2.0f);
 		std::pair<const Planeverb::Cell*, unsigned> IR = Planeverb::GetImpulseResponse(m_emitter);
 		std::memcpy(&m_impulseResponseCopy.front(), IR.first, sizeof(Planeverb::Cell) * m_impulseResponseLength);
 

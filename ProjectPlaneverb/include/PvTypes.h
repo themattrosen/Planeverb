@@ -94,7 +94,7 @@ namespace Planeverb
 	const constexpr Real PV_SQRT_3 = (Real)1.7320508f;					// precalculated sqrt(3)
 	const constexpr Real PV_MAX_AUDIBLE_FREQ = (Real)20000.f;			// maximum audible frequency for humans
 	const constexpr Real PV_MIN_AUDIBLE_FREQ = (Real)20.f;				// minimum audible frequency for humans
-	const constexpr Real PV_POINTS_PER_WAVELENGTH = (Real)4.f;			// number of cells per wavelength
+	const constexpr Real PV_POINTS_PER_WAVELENGTH = (Real)3.5f;			// number of cells per wavelength
 	const constexpr Real PV_SCHROEDER_OFFSET_S = (Real)0.01f;			// experimentally calculated amount to cut off schroeder tail
 	const constexpr Real PV_DISTANCE_GAIN_THRESHOLD = (Real)0.891251f;	// -1dB converted to linear gain
 	const constexpr Real PV_DELAY_CLOSE_THRESHOLD = (Real)5.f;			// "close enough" delay threshold when analyzing for direction
