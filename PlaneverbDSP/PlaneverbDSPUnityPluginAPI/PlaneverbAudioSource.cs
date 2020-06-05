@@ -172,6 +172,7 @@ namespace Planeverb
 		{
 			PlaneverbOutput pvoutput = emitter.GetOutput();
 			dspParams.obstructionGain = pvoutput.occlusion;
+			dspParams.wetGain = pvoutput.wetGain;
 			dspParams.lowpass = pvoutput.lowpass;
 			dspParams.rt60 = pvoutput.rt60;
 			dspParams.directionX = pvoutput.directionX;

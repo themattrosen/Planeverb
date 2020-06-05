@@ -47,6 +47,8 @@ namespace PlaneverbDSP
 		// true -  use PlaneverbDSP built in spatialization engine (VBAP)
 		// false - user will spatialize sound before sending buffers to PlaneverbDSP
 		bool useSpatialization = true;
+
+		float wetGainRatio = 0.9f;
 	};
 
 	struct vec2
@@ -66,6 +68,7 @@ namespace PlaneverbDSP
 	struct PlaneverbDSPInput
 	{
 		float obstructionGain;
+		float wetGain;
 		float rt60;
 		float lowpass;
 		vec2 direction;

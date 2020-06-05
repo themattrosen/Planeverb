@@ -51,7 +51,7 @@ namespace Planeverb
 				if(source)
 				{
 					PlaneverbContext.UpdateEmission(id, transform.position);
-					PlaneverbDSPContext.UpateEmitter(id, transform.forward);
+					PlaneverbDSPContext.UpateEmitter(id, transform.position, transform.forward);
 					output = PlaneverbContext.GetOutput(id);
 				}
 				// case this emission has ended since the last frame: end emission and reset the id
@@ -85,7 +85,7 @@ namespace Planeverb
 		{
 			// start the emission and create the source
 			id = PlaneverbContext.Emit(transform.position);
-			PlaneverbDSPContext.UpateEmitter(id, transform.forward);
+			PlaneverbDSPContext.UpateEmitter(id, transform.position, transform.forward);
 			PlaneverbDSPContext.SetEmitterDirectivityPattern(id, DirectivityPattern);
 			source = PlaneverbAudioManager.pvDSPAudioManager.Play(Clip, id, this, Loop);
 			if(source == null)
@@ -98,7 +98,7 @@ namespace Planeverb
 		{
 			// start the emission and create the source
 			id = PlaneverbContext.Emit(transform.position);
-			PlaneverbDSPContext.UpateEmitter(id, transform.forward);
+			PlaneverbDSPContext.UpateEmitter(id, transform.position, transform.forward);
 			PlaneverbDSPContext.SetEmitterDirectivityPattern(id, DirectivityPattern);
 			source = PlaneverbAudioManager.pvDSPAudioManager.Play(clipToPlay, id, this, Loop);
 			if (source == null)

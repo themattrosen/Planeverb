@@ -16,6 +16,9 @@ namespace Planeverb
 
 		[Tooltip("Flag for whether PlaneverbDSP should process spatialization (true), or if the user will handle spatialization themselves (false).")]
 		public bool useSpatialization;
+
+		[Tooltip("Ratio for how much the reverberant sound affects the audio.")]
+		public float wetGainRatio;
 	}
 
 } // namespace PlaneverbDSP

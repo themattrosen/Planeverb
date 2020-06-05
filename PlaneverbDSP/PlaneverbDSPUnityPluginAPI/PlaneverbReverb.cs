@@ -10,7 +10,8 @@ namespace Planeverb
 	{
 		// a value on the range [0, 3), represents the index into the output fetcher array
 		public int myIndex = -1;
-		public static int MAX_REVERBS = 3;
+		public bool isDry = false;
+		public static int MAX_REVERBS = 4;
 		private static int runtimeIndex = 0;
 		private static bool pvDSPProcessFlag = false;
 
@@ -20,9 +21,10 @@ namespace Planeverb
 
 		private void Awake()
 		{
-			// ReverbA myIndex = 0
-			// ReverbB myIndex = 1
-			// ReverbC myIndex = 2
+			// Dry     myIndex = 0
+			// ReverbA myIndex = 1
+			// ReverbB myIndex = 2
+			// ReverbC myIndex = 3
 			Debug.Assert(myIndex >= 0 && myIndex < MAX_REVERBS,
 				"PlaneverbReverb MyIndex not set properly!");
 

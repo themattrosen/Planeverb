@@ -12,7 +12,8 @@ namespace PlaneverbDSP
 	// Shuts down the Planeverb DSP module
 	PV_DSP_API void Exit();
 
-	PV_DSP_API void UpdateEmitter(EmissionID id, float forwardX, float forwardY, float forwardZ);
+	PV_DSP_API void UpdateEmitter(EmissionID id, float posX, float posY, float posZ,
+		float forwardX, float forwardY, float forwardZ);
 
 	PV_DSP_API void SetEmitterDirectivityPattern(EmissionID id, PlaneverbDSPSourceDirectivityPattern pattern);
 
@@ -25,9 +26,10 @@ namespace PlaneverbDSP
 		const float* in, unsigned numFrames);
 
 	// Retrieve pre-processed output buffers
+	// @param dryOut gives the dry output buffer
 	// @param outA gives an output buffer that feeds in to a reverb with 0.5s decay time
 	// @param outB gives an output buffer that feeds in to a reverb with 1.0s decay time
 	// @param outC gives an output buffer that feeds in to a reverb with 3.0s decay time
-	PV_DSP_API void GetOutput(float** outA, float** outB, float** outC);
+	PV_DSP_API void GetOutput(float** dryOut, float** outA, float** outB, float** outC);
 
 } // namespace PlaneverbDSP

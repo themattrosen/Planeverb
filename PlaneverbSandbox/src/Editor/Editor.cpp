@@ -38,7 +38,7 @@ void Editor::Init(GLFWwindow * window)
 	Planeverb::SetListenerPosition(m_listener);
 	PlaneverbDSP::SetListenerTransform(m_listener.x, m_listener.y, m_listener.z,
 		0, 0, 1);
-	PlaneverbDSP::UpdateEmitter(m_emitterID, 1, 0, 0);
+	PlaneverbDSP::UpdateEmitter(m_emitterID, m_emitter.x, m_emitter.y, m_emitter.z, 1, 0, 0);
 	PlaneverbDSP::SetEmitterDirectivityPattern(m_emitterID, PlaneverbDSP::pvd_Cardioid);
 	using namespace std::chrono_literals;
 	std::this_thread::sleep_for(100ms);
@@ -476,25 +476,26 @@ void Editor::ShowIRWindow()
 	}
 }
 
+//static const float GRID_TO_WORLD_SCALE = 64.f; // for 10x10
+static const float GRID_TO_WORLD_SCALE = 64.f; // for 25x25
+
 void Editor::DisplayGrid(ImDrawList * list)
 {
 	if (!m_showGrid) return;
 
 	static const ImU32 GRID_COLOR = IM_COL32(200, 200, 200, 40);
-	static const float GRID_SZ = 64.f;
 	ImVec2 winPos = ImGui::GetCursorScreenPos();
 	ImVec2 canvasSz = ImGui::GetWindowSize();
-	for (float x = std::fmod(m_scrolling.x, GRID_SZ); x < canvasSz.x; x += GRID_SZ)
+	for (float x = std::fmod(m_scrolling.x, GRID_TO_WORLD_SCALE); x < canvasSz.x; x += GRID_TO_WORLD_SCALE)
 	{
 		list->AddLine(ImVec2(x, 0.f) + winPos, ImVec2(x, canvasSz.y) + winPos, GRID_COLOR);
 	}
-	for (float y = std::fmod(m_scrolling.y, GRID_SZ); y < canvasSz.y; y += GRID_SZ)
+	for (float y = std::fmod(m_scrolling.y, GRID_TO_WORLD_SCALE); y < canvasSz.y; y += GRID_TO_WORLD_SCALE)
 	{
 		list->AddLine(ImVec2(0.f, y) + winPos, ImVec2(canvasSz.x, y) + winPos, GRID_COLOR);
 	}
 }
 
-static const float GRID_TO_WORLD_SCALE = 64.f;
 
 void Editor::DisplayAABBs(ImDrawList * drawList, const ImVec2 & offset)
 {
@@ -576,8 +577,8 @@ void Editor::DisplayEmitterAndListener(ImDrawList * drawList, const ImVec2 & off
 	ImVec2 emitterRectMin = emitterPos - (BUTTON_SIZE * 0.5f);
 
     ImGui::SetWindowFontScale(2.0f);
-	ImGui::SetCursorScreenPos(listenerRectMin);
-	ImGui::InvisibleButton("listener", BUTTON_SIZE);
+	ImGui::SetCursorScreenPos(listenerRectMin + ImVec2{0, -10}/* + (BUTTON_SIZE * 0.5)*/);
+	ImGui::InvisibleButton("listener", { 30, 30 });
     bool isHovered = ImGui::IsItemHovered(); 
 	ImVec2 perp = listenerPos + listenerForward;
 	Normalize(perp);
@@ -588,17 +589,12 @@ void Editor::DisplayEmitterAndListener(ImDrawList * drawList, const ImVec2 & off
 	{
 		ImGui::SetCursorScreenPos(listenerPos + (BUTTON_SIZE * 0.5f));
 		ImGui::Text("Listener");
-		//drawList->AddCircleFilled(listenerPos, BUTTON_RADIUS, LISTENER_HOVERED);
-		
-		//drawList->AddTriangleFilled((listenerPos + perp) * 20, (listenerPos + left) * 10, (listenerPos + right) * 10, LISTENER_HOVERED);
 		drawList->AddTriangleFilled(listenerPos + ImVec2(0, -30), listenerPos + ImVec2(10, 0), listenerPos + ImVec2(-10, 0), LISTENER_HOVERED);
 	}
 	else
 	{
 		ImGui::SetCursorScreenPos(listenerPos + (BUTTON_SIZE * 0.5f));
 		ImGui::Text("Listener");
-		//drawList->AddCircleFilled(listenerPos, BUTTON_RADIUS, LISTENER_COLOR);
-		//drawList->AddTriangleFilled((listenerPos + perp) * 20, (listenerPos + left) * 10, (listenerPos + right) * 10, LISTENER_COLOR);
 		drawList->AddTriangleFilled(listenerPos + ImVec2(0, -30), listenerPos + ImVec2(10, 0), listenerPos + ImVec2(-10, 0), LISTENER_HOVERED);
 
 	}
@@ -614,8 +610,8 @@ void Editor::DisplayEmitterAndListener(ImDrawList * drawList, const ImVec2 & off
 			0, 0, 1);
 	}
 
-	ImGui::SetCursorScreenPos(emitterRectMin);
-	ImGui::InvisibleButton("emitter", BUTTON_SIZE);
+	ImGui::SetCursorScreenPos(emitterRectMin + ImVec2{ 0, -10 });
+	ImGui::InvisibleButton("emitter", { 30, 30 });
 	isHovered = ImGui::IsItemHovered();
 	if (isHovered)
 	{
@@ -641,7 +637,7 @@ void Editor::DisplayEmitterAndListener(ImDrawList * drawList, const ImVec2 & off
 		m_emitter.x += delta.x / GRID_TO_WORLD_SCALE;
 		m_emitter.z += delta.y / GRID_TO_WORLD_SCALE;
 		Planeverb::UpdateEmission(m_emitterID, m_emitter);
-		PlaneverbDSP::UpdateEmitter(m_emitterID, 1, 0, 0);
+		PlaneverbDSP::UpdateEmitter(m_emitterID, m_emitter.x, m_emitter.y, m_emitter.z, 1, 0, 0);
 		PlaneverbDSP::SetEmitterDirectivityPattern(m_emitterID, PlaneverbDSP::pvd_Cardioid);
 	}
 

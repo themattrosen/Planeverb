@@ -79,6 +79,7 @@ extern "C"
 	struct PlaneverbOutput
 	{
 		float occlusion;
+		float wetGain;
 		float rt60;
 		float lowpass;
 		float directionX;
@@ -93,6 +94,7 @@ extern "C"
 		PlaneverbOutput output;
 		auto poutput = Planeverb::GetOutput((Planeverb::EmissionID)emissionID);
 		output.occlusion = poutput.occlusion;
+		output.wetGain = poutput.wetGain;
 		output.rt60 = poutput.rt60;
 		output.lowpass = poutput.lowpass;
 		output.directionX = poutput.direction.x;

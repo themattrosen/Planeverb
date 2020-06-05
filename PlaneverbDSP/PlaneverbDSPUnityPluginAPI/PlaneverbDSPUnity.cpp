@@ -7,6 +7,7 @@
 #define PVU_EXPORT UNITY_INTERFACE_EXPORT
 #define PVU_CC UNITY_INTERFACE_API
 
+static float* g_buffDry = nullptr;
 static float* g_buffA = nullptr;
 static float* g_buffB = nullptr;
 static float* g_buffC = nullptr;
@@ -16,6 +17,7 @@ namespace
 	struct PlaneverbDSPInput
 	{
 		float obstructionGain;
+		float wetGain;
 		float rt60;
 		float lowpass;
 		float directionX;
@@ -38,13 +40,14 @@ extern "C"
 #pragma region Export Functions
 	PVU_EXPORT void PVU_CC
 	PlaneverbDSPInit(int maxCallbackLength, int samplingRate,
-		int dspSmoothingFactor, bool useSpatialization)
+		int dspSmoothingFactor, bool useSpatialization, float wetGainRatio)
 	{
 		PlaneverbDSP::PlaneverbDSPConfig config;
 		config.maxCallbackLength = maxCallbackLength;
 		config.samplingRate = samplingRate;
 		config.dspSmoothingFactor = dspSmoothingFactor;
 		config.useSpatialization = useSpatialization;
+		config.wetGainRatio = wetGainRatio;
 
 		PlaneverbDSP::Init(&config);
 	}
@@ -64,9 +67,11 @@ extern "C"
 	}
 
 	PVU_EXPORT void PVU_CC
-	PlaneverbDSPUpdateEmitter(int emissionID, float forwardX, float forwardY, float forwardZ)
+	PlaneverbDSPUpdateEmitter(int emissionID, float posX, float posY, float posZ,
+		float forwardX, float forwardY, float forwardZ)
 	{
-		PlaneverbDSP::UpdateEmitter((PlaneverbDSP::EmissionID)emissionID, forwardX, forwardY, forwardZ);
+		PlaneverbDSP::UpdateEmitter((PlaneverbDSP::EmissionID)emissionID, posX, posY, posZ,
+			forwardX, forwardY, forwardZ);
 	}
 
 	PVU_EXPORT void PVU_CC
@@ -81,6 +86,7 @@ extern "C"
 		const float* in, int numFrames)
 	{
 		PlaneverbDSP::PlaneverbDSPInput input;
+		input.wetGain = dspParams->wetGain;
 		input.obstructionGain = dspParams->obstructionGain;
 		input.lowpass = dspParams->lowpass;
 		input.rt60 = dspParams->rt60;
@@ -96,11 +102,17 @@ extern "C"
 	PVU_EXPORT bool PVU_CC 
 	PlaneverbDSPProcessOutput()
 	{
-		PlaneverbDSP::GetOutput(&g_buffA, &g_buffB, &g_buffC);
+		PlaneverbDSP::GetOutput(&g_buffDry, &g_buffA, &g_buffB, &g_buffC);
 		if (!g_buffA) return false;
 		else if (std::isnan(*g_buffA)) return false;
 
 		return true;
+	}
+
+	PVU_EXPORT void PVU_CC
+	PlaneverbDSPGetDryBuffer(float** buf)
+	{
+		*buf = g_buffDry;
 	}
 
 	PVU_EXPORT void PVU_CC 

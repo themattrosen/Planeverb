@@ -143,7 +143,7 @@ void AudioCore::ProcessBlock(float * out, int frames)
 		PlaneverbDSP::PlaneverbDSPInput dspInput;
 		dspInput.lowpass = pvoutput.lowpass;
 		dspInput.obstructionGain = pvoutput.occlusion;
-		//dspInput.obstructionGain = 0.05f;
+		dspInput.wetGain = pvoutput.wetGain;
 		dspInput.rt60 = pvoutput.rt60;
 		dspInput.direction.x = pvoutput.direction.x;
 		dspInput.direction.y = pvoutput.direction.y;
@@ -167,15 +167,17 @@ void AudioCore::ProcessBlock(float * out, int frames)
 		//std::memcpy(out, dataArray, samplesToCopy * sizeof(float));
 		PlaneverbDSP::SendSource(m_data.id, &dspInput, dataArray, samplesToCopy / CHANNELS);
 		//std::memset(out, 0, sizeof(float) * samples);
+		float* dry = nullptr;
 		float* obA = nullptr;
 		float* obB = nullptr;
 		float* obC = nullptr;
 		
-		PlaneverbDSP::GetOutput(&obA, &obB, &obC);
+		PlaneverbDSP::GetOutput(&dry, &obA, &obB, &obC);
 
 		for (int i = 0; i < samplesToCopy; ++i)
 		{
-			*out++ = *obA++ + *obB++ + *obC++;
+			// no reverb here
+			*out++ = *dry++;
 		}
 		
 		m_data.readIndex += samplesToCopy;

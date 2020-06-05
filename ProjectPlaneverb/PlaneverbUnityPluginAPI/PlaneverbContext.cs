@@ -7,6 +7,7 @@ namespace Planeverb
 	public struct PlaneverbOutput
 	{
 		public float occlusion;
+		public float wetGain;
 		public float rt60;
 		public float lowpass;
 		public float directionX;

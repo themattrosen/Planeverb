@@ -7,7 +7,7 @@
 const unsigned RATE = 44100;
 const unsigned short BIT_RATE = 16;
 const unsigned short CHANNELS = 2;
-const unsigned FRAMES_PER_BLOCK = 128;
+const unsigned FRAMES_PER_BLOCK = 512;
 
 class ScopedTimer
 {

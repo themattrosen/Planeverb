@@ -8,6 +8,7 @@ namespace Planeverb
 	public struct PlaneverbDSPInput
 	{
 		public float obstructionGain;
+		public float wetGain;
 		public float rt60;
 		public float lowpass;
 		public float directionX;
@@ -24,7 +25,7 @@ namespace Planeverb
 
 		[DllImport(DLLNAME)]
 		private static extern void PlaneverbDSPInit(int maxCallbackLength, int samplingRate,
-		int dspSmoothingFactor, bool useSpatialization);
+		int dspSmoothingFactor, bool useSpatialization, float wetGainRatio);
 
 		[DllImport(DLLNAME)]
 		private static extern void PlaneverbDSPExit();
@@ -34,7 +35,7 @@ namespace Planeverb
 		float forwardX, float forwardY, float forwardZ);
 
 		[DllImport(DLLNAME)]
-		private static extern void PlaneverbDSPUpdateEmitter(int emissionID, 
+		private static extern void PlaneverbDSPUpdateEmitter(int emissionID, float posX, float posY, float posZ,
 			float forwardX, float forwardY, float forwardZ);
 
 		[DllImport(DLLNAME)]
@@ -48,6 +49,9 @@ namespace Planeverb
 		private static extern bool PlaneverbDSPProcessOutput();
 
 		[DllImport(DLLNAME)]
+		private static extern void PlaneverbDSPGetDryBuffer(ref IntPtr buf);
+
+		[DllImport(DLLNAME)]
 		private static extern void PlaneverbDSPGetBufferA(ref IntPtr ptrArray);
 
 		[DllImport(DLLNAME)]
@@ -59,6 +63,7 @@ namespace Planeverb
 		private delegate void FetchOutputBuffer(ref IntPtr ptrArray);
 		private static FetchOutputBuffer[] outputFetchers =
 		{
+			PlaneverbDSPGetDryBuffer,
 			PlaneverbDSPGetBufferA,
 			PlaneverbDSPGetBufferB,
 			PlaneverbDSPGetBufferC
@@ -77,7 +82,7 @@ namespace Planeverb
 			globalContext = this;
 
 			PlaneverbDSPInit(config.maxCallbackLength, config.samplingRate,
-				config.dspSmoothingFactor, config.useSpatialization);
+				config.dspSmoothingFactor, config.useSpatialization, config.wetGainRatio);
 		}
 
 		void OnDestroy()
@@ -94,9 +99,9 @@ namespace Planeverb
 				forward.x, forward.y, forward.z);
 		}
 
-		public static void UpateEmitter(int id, Vector3 forward)
+		public static void UpateEmitter(int id, Vector3 pos, Vector3 forward)
 		{
-			PlaneverbDSPUpdateEmitter(id, forward.x, forward.y, forward.z);
+			PlaneverbDSPUpdateEmitter(id, pos.x, pos.y, pos.z, forward.x, forward.y, forward.z);
 		}
 
 		public static void SetEmitterDirectivityPattern(int id, PlaneverbSourceDirectivityPattern pattern)
@@ -118,7 +123,7 @@ namespace Planeverb
 		public static void GetOutputBuffer(int reverb, ref float[] buff)
 		{
 			// ensure that the index is valid
-			if (reverb < 0 || reverb >= 3) return;
+			if (reverb < 0 || reverb >= 4) return;
 			
 			// fetch the buffer
 			IntPtr result = IntPtr.Zero;

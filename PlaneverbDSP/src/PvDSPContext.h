@@ -20,7 +20,7 @@ namespace PlaneverbDSP
 			const float* in, unsigned numFrames);
 
 		// retrieve output
-		void GetOutput(float** outA, float** outB, float** outC);
+		void GetOutput(float** dryOut, float** outA, float** outB, float** outC);
 
 		// update global listener transform
 		void SetListenerTransform(const vec3& position, const vec3& forward);
@@ -43,12 +43,14 @@ namespace PlaneverbDSP
 		char* m_mem = nullptr;
 
 		// 4 input/output buffers 
-		float* m_inputBufferStorage = nullptr;
-		float* m_outputBufferA = nullptr;
-		float* m_outputBufferB = nullptr;
-		float* m_outputBufferC = nullptr;
+		float* m_dryOutput = nullptr;
+		float* m_wetOutputA = nullptr;
+		float* m_wetOutputB = nullptr;
+		float* m_wetOutputC = nullptr;
 
-		// double buffered 3 output buffers
+		// double buffered 4 output buffers
+		float* m_dryOutputBuffer_1 = nullptr;
+		float* m_dryOutputBuffer_2 = nullptr;
 		float* m_outputBufferA_1 = nullptr;
 		float* m_outputBufferB_1 = nullptr;
 		float* m_outputBufferC_1 = nullptr;
