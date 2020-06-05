@@ -16,14 +16,14 @@ int main()
 	config.gridBoundaryType = Planeverb::pv_AbsorbingBoundary;
 	config.gridSizeInMeters = Planeverb::vec2(25.f, 25.f);
 	config.tempFileDirectory = ".";
-	config.maxThreadUsage = 2;
+	config.maxThreadUsage = 1;
 	
 	Planeverb::Init(&config);
 	
 	PlaneverbDSP::PlaneverbDSPConfig dspConfig;
 	dspConfig.samplingRate = RATE;
 	dspConfig.useSpatialization = true;
-	dspConfig.dspSmoothingFactor = 5;
+	dspConfig.dspSmoothingFactor = 2;
 	PlaneverbDSP::Init(&dspConfig);
 	
 	AudioCore::Instance().Init();

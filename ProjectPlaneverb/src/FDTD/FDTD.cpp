@@ -83,7 +83,7 @@ namespace Planeverb
 	}
 	
 	// process FDTD
-	void Grid::GenerateResponseCPU(const vec3 & listener)
+	void Grid::GenerateResponseCPU(const vec3 &listener)
 	{
 		// determine pressure and velocity update constants
 		const Real Courant = m_dt / m_dx;
@@ -110,22 +110,23 @@ namespace Planeverb
 		// RESET all pressure and velocity, but not B fields (can't use memset)
 		{
 			Cell* resetPtr = m_grid;
-			for (int i = 0; i < loopSize; ++i)
+            const int N = loopSize;
+			for (int i = 0; i < N; ++i, ++resetPtr)
 			{
 				resetPtr->pr = 0.f;
 				resetPtr->vx = 0.f;
 				resetPtr->vy = 0.f;
-				++resetPtr;
 			}
 		}
 
-		// process FDTD update for 1 IR
+		// Time-stepped FDTD simulation
 		for (int t = 0; t < responseLength; ++t)
 		{
 			// process pressure grid
 			{
-				#pragma omp parallel for
-				for (int i = 0; i < loopSize; ++i)
+                const int N = loopSize;
+//#pragma omp parallel for
+                for (int i = 0; i < N; ++i)
 				{
 					vec2* normal = &(m_boundaries[i].normal);
 					int normalInd = i + (int)normal->y * (gridy + 1) + (int)normal->x;	// [i + n.x, j + n.y]
@@ -145,7 +146,7 @@ namespace Planeverb
 			// process x component of particle velocity
 			{
 				// eq to for(1 to sizex) for(0 to sizey)
-				#pragma omp parallel for
+//#pragma omp parallel for
 				for (int i = gridy + 1; i < loopSize; ++i)
 				{
 					vec2* normal = &(m_boundaries[i].normal);
@@ -164,7 +165,7 @@ namespace Planeverb
 			// process y component of particle velocity
 			{
 				// eq to for(0 to sizex) for(1 to sizey)
-				#pragma omp parallel for
+//#pragma omp parallel for
 				for (int i = 1; i < loopSize; ++i)
 				{
 					vec2 normal = (m_boundaries[i].normal);
@@ -182,7 +183,7 @@ namespace Planeverb
 
 			// process ABC top/bottom
 			{
-				#pragma omp parallel for
+//#pragma omp parallel for
 				for (int i = 0; i < gridy; ++i)
 				{
 					int index1 = i;
@@ -195,7 +196,7 @@ namespace Planeverb
 
 			// process ABC left/right
 			{
-				#pragma omp parallel for
+//#pragma omp parallel for
 				for (int i = 0; i < gridx; ++i)
 				{
 					int index1 = i * (gridy + 1);
@@ -208,7 +209,7 @@ namespace Planeverb
 
 			// add results to the response cube
 			{
-				#pragma omp parallel for
+//#pragma omp parallel for
 				for (int i = 0; i < loopSize; ++i)
 				{
 					m_pulseResponse[i][t] = m_grid[i];

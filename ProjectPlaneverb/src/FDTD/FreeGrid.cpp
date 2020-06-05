@@ -86,7 +86,7 @@ namespace Planeverb
 			return efree;
 		}
 
-		// divide free energy by distance
+		// 2D propagation: energy decays as 1/r
 		return efree / r;
 	}
 

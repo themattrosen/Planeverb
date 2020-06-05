@@ -118,6 +118,7 @@ xcopy /y $(SolutionDir)bin\$(Configuration)-$(Platform)\PlaneverbDSP\PlaneverbDS
     </ClCompile>
     <PostBuildEvent>
       <Command>xcopy /y $(SolutionDir)bin\$(Configuration)-$(Platform)\ProjectPlaneverb\ProjectPlaneverb.dll $(SolutionDir)bin\$(Configuration)-$(Platform)\$(ProjectName)
+xcopy /y $(SolutionDir)bin\$(Configuration)-$(Platform)\ProjectPlaneverb\ProjectPlaneverb.pdb $(SolutionDir)bin\$(Configuration)-$(Platform)\$(ProjectName)
 xcopy /y $(SolutionDir)External\dll\$(Platform)\*.dll $(SolutionDir)bin\$(Configuration)-$(Platform)\$(ProjectName)
 xcopy /y $(SolutionDir)bin\$(Configuration)-$(Platform)\PlaneverbDSP\PlaneverbDSP.dll $(SolutionDir)bin\$(Configuration)-$(Platform)\$(ProjectName)</Command>
     </PostBuildEvent>
@@ -165,6 +166,7 @@ xcopy /y $(SolutionDir)bin\$(Configuration)-$(Platform)\PlaneverbDSP\PlaneverbDS
     </Link>
     <PostBuildEvent>
       <Command>xcopy /y $(SolutionDir)bin\$(Configuration)-$(Platform)\ProjectPlaneverb\ProjectPlaneverb.dll $(SolutionDir)bin\$(Configuration)-$(Platform)\$(ProjectName)
+xcopy /y $(SolutionDir)bin\$(Configuration)-$(Platform)\ProjectPlaneverb\ProjectPlaneverb.pdb $(SolutionDir)bin\$(Configuration)-$(Platform)\$(ProjectName)
 xcopy /y $(SolutionDir)External\dll\$(Platform)\*.dll $(SolutionDir)bin\$(Configuration)-$(Platform)\$(ProjectName)
 xcopy /y $(SolutionDir)bin\$(Configuration)-$(Platform)\PlaneverbDSP\PlaneverbDSP.dll $(SolutionDir)bin\$(Configuration)-$(Platform)\$(ProjectName)</Command>
     </PostBuildEvent>

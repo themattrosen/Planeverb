@@ -1,10 +1,10 @@
 #pragma once
 
+// Enable different bit-depth for floating point numbers
+#define Real float
+
 namespace Planeverb
 {
-	// Enable different bit-depth for floating point numbers
-	using Real = float;
-
 	struct vec3
 	{
 		Real x, y, z;
