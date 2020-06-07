@@ -48,7 +48,8 @@ namespace PlaneverbDSP
 		float* m_wetOutputB = nullptr;
 		float* m_wetOutputC = nullptr;
 
-		// double buffered 4 output buffers
+		// double buffered 4 output buffers, one input buffer
+		float* m_inputStorage = nullptr;
 		float* m_dryOutputBuffer_1 = nullptr;
 		float* m_dryOutputBuffer_2 = nullptr;
 		float* m_outputBufferA_1 = nullptr;

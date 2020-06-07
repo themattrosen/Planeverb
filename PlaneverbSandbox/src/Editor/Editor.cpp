@@ -477,7 +477,7 @@ void Editor::ShowIRWindow()
 }
 
 //static const float GRID_TO_WORLD_SCALE = 64.f; // for 10x10
-static const float GRID_TO_WORLD_SCALE = 64.f; // for 25x25
+static const float GRID_TO_WORLD_SCALE = 32.f; // for 20x20
 
 void Editor::DisplayGrid(ImDrawList * list)
 {
