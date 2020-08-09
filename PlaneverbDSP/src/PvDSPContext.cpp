@@ -104,7 +104,7 @@ namespace PlaneverbDSP
 
 		// allocate memory all at once
 		unsigned size =
-			m_bufferSize +					// 1 input temp storage buffer
+			m_bufferSize / PV_DSP_CHANNEL_COUNT + // 1 input temp storage buffer, mono
 			m_bufferSize * 4 * 2 +			// 4 ouput buffers, double buffered
 			sizeof(EmissionsManager) +		// emissions manager
 			sizeof(ImpulseResponse) +		// impulse response	- not currently supported
@@ -118,7 +118,7 @@ namespace PlaneverbDSP
 
 		// place memory locations
 		char* temp = m_mem;
-		m_inputStorage = reinterpret_cast<float*>(temp); temp += m_bufferSize;
+		m_inputStorage = reinterpret_cast<float*>(temp); temp += m_bufferSize / PV_DSP_CHANNEL_COUNT;
 		m_dryOutputBuffer_1 = reinterpret_cast<float*>(temp); temp += m_bufferSize;
 		m_outputBufferA_1 = reinterpret_cast<float*>(temp); temp += m_bufferSize;
 		m_outputBufferB_1 = reinterpret_cast<float*>(temp); temp += m_bufferSize;
@@ -236,7 +236,7 @@ namespace PlaneverbDSP
 		{
 			float dotValue = directivity.Dot(forward);
 			float cardioid = (1.f + dotValue) / 2.f;
-			return (cardioid > 0.1f) ? cardioid : 0.1f;
+			return (cardioid > PV_DSP_MIN_DRY_GAIN) ? cardioid : PV_DSP_MIN_DRY_GAIN;
 		}
 
 		using SourceDirectivityPatternFunc = float(*)(const vec2& directivity, const vec2& forward);
@@ -261,7 +261,13 @@ namespace PlaneverbDSP
 		{
 			return;
 		}
-		
+
+		/////////////////////////////
+		// Calculate all gains first
+
+		// determine lerp factor
+		float lerpFactor = 1.f / ((float)m_numFrames * (float)m_config.dspSmoothingFactor);
+
 		// determine each reverb gain target
 		float revGainA = FindGainA(dspParams->rt60, dspParams->wetGain);
 		float revGainB = FindGainB(dspParams->rt60, dspParams->wetGain);
@@ -269,8 +275,7 @@ namespace PlaneverbDSP
 
 		// get target and current emission data
 		auto& emissionData = m_emissions->GetDataTarget(id);
-		emissionData.lpf[0].SetCutoff(dspParams->lowpass);
-		emissionData.lpf[1].SetCutoff(dspParams->lowpass);
+		emissionData.lpf.SetCutoff(dspParams->lowpass);
 		emissionData.occlusion = dspParams->obstructionGain;
 		emissionData.wetGain = dspParams->wetGain;
 		emissionData.rt60 = dspParams->rt60;
@@ -284,9 +289,6 @@ namespace PlaneverbDSP
 		float currRevGainB = FindGainB(currentData.rt60, currentData.wetGain);
 		float currRevGainC = FindGainC(currentData.rt60, currentData.wetGain);
 		float currDryGain = currentData.occlusion;
-
-		// determine lerp factor
-		float lerpFactor = 1.f / ((float)m_numFrames * (float)m_config.dspSmoothingFactor);
 
 		// determine panning current and target values
 		float targetleft = 1.f, targetright = 1.f;
@@ -331,50 +333,20 @@ namespace PlaneverbDSP
 		euclideanDistance = std::sqrt(dist.x * dist.x + dist.y * dist.y);
 		euclideanDistance = (euclideanDistance < 1.f) ? 1.f : euclideanDistance;
 		float currentDistanceAttenuation = 1.f / euclideanDistance;
+		
+		float targetDryGain = std::max(emissionData.occlusion, PV_DSP_MIN_DRY_GAIN);
 
-		// copy input into internal storage
+		////////////////////////////////////////
+		// Run all processing after calculation
+
+		// copy input into internal storage -> Sum to mono
 		float* inputStoragePtr = m_inputStorage;
 		const float* inputPtr = in;
-		std::memcpy(inputStoragePtr, inputPtr, sizeof(float) * numSamples);
-
-		// process lowpass on copy of input signal
+		for (int i = 0; i < numFrames; ++i)
 		{
-			auto* farr = emissionData.lpf;
-			for (int i = 0; i < numChannels; ++i)
-			{
-				farr->Process(m_inputStorage, i, numChannels, numFrames, dspParams->lowpass, lerpFactor);
-				++farr;
-			}
-		}
-
-		// apply dry gains
-		float targetDryGain = std::max(emissionData.occlusion, PV_DSP_MIN_DRY_GAIN);
-		float* dryPtr = m_dryOutput;
-		//float targetTotalGainLeft = targetleft * targetDryGain * targetDirectivityGain * targetDistanceAttenuation;
-		//float targetTotalGainRight = targetright * targetDryGain * targetDirectivityGain * targetDistanceAttenuation;
-		//float currentTotalGainLeft = currentleft * currDryGain * currentDirectivityGain * currentDistanceAttenuation;
-		//float currentTotalGainRight = currentleft * currDryGain * currentDirectivityGain * currentDistanceAttenuation;
-		//targetTotalGainLeft = std::max(targetTotalGainLeft, PV_DSP_MIN_DRY_GAIN);
-		//targetTotalGainRight = std::max(targetTotalGainRight, PV_DSP_MIN_DRY_GAIN);
-		//currentTotalGainLeft = std::max(currentTotalGainLeft, PV_DSP_MIN_DRY_GAIN);
-		//currentTotalGainRight = std::max(currentTotalGainRight, PV_DSP_MIN_DRY_GAIN);
-
-		for (int i = 0; i < m_numFrames; ++i)
-		{
-			//*dryPtr++ += *inputStoragePtr++ * currentTotalGainLeft;
-			//*dryPtr++ += *inputStoragePtr++ * currentTotalGainRight;
-			//currentTotalGainLeft = LERP_FLOAT(currentTotalGainLeft, targetTotalGainLeft, lerpFactor);
-			//currentTotalGainRight = LERP_FLOAT(currentTotalGainRight, targetTotalGainRight, lerpFactor);
-			float nextLeft = currentleft * currDryGain * currentDirectivityGain * currentDistanceAttenuation;
-			float nextRight = currentleft * currDryGain * currentDirectivityGain * currentDistanceAttenuation;
-			*dryPtr++ += *inputStoragePtr++ * nextLeft;
-			*dryPtr++ += *inputStoragePtr++ * nextRight;
-			currentright = LERP_FLOAT(currentright, targetright, lerpFactor);
-			currentleft = LERP_FLOAT(currentleft, targetleft, lerpFactor);
-			currDryGain = LERP_FLOAT(currDryGain, targetDryGain, lerpFactor);
-			currentDirectivityGain = LERP_FLOAT(currentDirectivityGain, targetDirectivityGain, lerpFactor);
-			currentDistanceAttenuation = LERP_FLOAT(currentDistanceAttenuation, targetDistanceAttenuation, lerpFactor);
-
+			float left = *inputPtr++;
+			float right = *inputPtr++;
+			*inputStoragePtr++ = left + right;
 		}
 		inputStoragePtr = m_inputStorage;
 
@@ -392,9 +364,9 @@ namespace PlaneverbDSP
 			{
 				for (int j = 0; j < frames; ++j)
 				{
-					*buf++ = *in++ * currRevGain * m_config.wetGainRatio;
-					*buf++ = *in++ * currRevGain * m_config.wetGainRatio;
-
+					*buf++ = *in * currRevGain * m_config.wetGainRatio;
+					*buf++ = *in * currRevGain * m_config.wetGainRatio;
+					++in;
 					currRevGain = LERP_FLOAT(currRevGain, targetRevGain, lerpFactor);
 				}
 			};
@@ -403,27 +375,53 @@ namespace PlaneverbDSP
 			{
 				processFunc(bufArray[i], inputStoragePtr, targetGainArray[i], currentGainArray[i], numFrames);
 			}
-
-			// lerp the real current data parameters
-			// this can probably be vectorized at some point
-			currentData.occlusion = currDryGain;
-			for (int j = 0; j < m_numFrames; ++j)
-			{
-				currentData.direction.x = LERP_FLOAT(currentData.direction.x, emissionData.direction.x, lerpFactor);
-				currentData.direction.y = LERP_FLOAT(currentData.direction.y, emissionData.direction.y, lerpFactor);
-				currentData.wetGain = LERP_FLOAT(currentData.wetGain, emissionData.wetGain, lerpFactor);
-				currentData.rt60 = LERP_FLOAT(currentData.rt60, emissionData.rt60, lerpFactor);
-				currentData.forward.x = LERP_FLOAT(currentData.forward.x, emissionData.forward.x, lerpFactor);
-				currentData.forward.y = LERP_FLOAT(currentData.forward.y, emissionData.forward.y, lerpFactor);
-				currentData.directivity.x = LERP_FLOAT(currentData.directivity.x, emissionData.directivity.x, lerpFactor);
-				currentData.directivity.y = LERP_FLOAT(currentData.directivity.y, emissionData.directivity.y, lerpFactor);
-				currentData.position.x = LERP_FLOAT(currentData.position.x, emissionData.position.x, lerpFactor);
-				currentData.position.y = LERP_FLOAT(currentData.position.y, emissionData.position.y, lerpFactor);
-			}
 		}
 
-		currentData.lpf[0].SetCutoff(emissionData.lpf[0].GetCutoff());
-		currentData.lpf[1].SetCutoff(emissionData.lpf[1].GetCutoff());
+		// process lowpass on copy of input signal
+		emissionData.lpf.Process(m_inputStorage, 0, 1, numFrames, dspParams->lowpass, lerpFactor);
+
+		// apply dry gains
+		for (int i = 0; i < m_numFrames; ++i)
+		{
+			float nextGain = currDryGain * currentDirectivityGain * currentDistanceAttenuation;
+			*inputStoragePtr++ *= nextGain;
+			
+			currDryGain = LERP_FLOAT(currDryGain, targetDryGain, lerpFactor);
+			currentDirectivityGain = LERP_FLOAT(currentDirectivityGain, targetDirectivityGain, lerpFactor);
+			currentDistanceAttenuation = LERP_FLOAT(currentDistanceAttenuation, targetDistanceAttenuation, lerpFactor);
+		}
+		inputStoragePtr = m_inputStorage;
+
+		// apply spatialization
+		float* dryPtr = m_dryOutput;
+		inputStoragePtr = m_inputStorage;
+		for (int i = 0; i < numFrames; ++i)
+		{
+			*dryPtr++ += *inputStoragePtr * currentleft;
+			*dryPtr++ += *inputStoragePtr * currentright;
+			currentright = LERP_FLOAT(currentright, targetright, lerpFactor);
+			currentleft = LERP_FLOAT(currentleft, targetleft, lerpFactor);
+			++inputStoragePtr;
+		}
+
+		// lerp the real current data parameters
+		// this can probably be vectorized at some point
+		currentData.occlusion = currDryGain;
+		for (int j = 0; j < m_numFrames; ++j)
+		{
+			currentData.direction.x = LERP_FLOAT(currentData.direction.x, emissionData.direction.x, lerpFactor);
+			currentData.direction.y = LERP_FLOAT(currentData.direction.y, emissionData.direction.y, lerpFactor);
+			currentData.wetGain = LERP_FLOAT(currentData.wetGain, emissionData.wetGain, lerpFactor);
+			currentData.rt60 = LERP_FLOAT(currentData.rt60, emissionData.rt60, lerpFactor);
+			currentData.forward.x = LERP_FLOAT(currentData.forward.x, emissionData.forward.x, lerpFactor);
+			currentData.forward.y = LERP_FLOAT(currentData.forward.y, emissionData.forward.y, lerpFactor);
+			currentData.directivity.x = LERP_FLOAT(currentData.directivity.x, emissionData.directivity.x, lerpFactor);
+			currentData.directivity.y = LERP_FLOAT(currentData.directivity.y, emissionData.directivity.y, lerpFactor);
+			currentData.position.x = LERP_FLOAT(currentData.position.x, emissionData.position.x, lerpFactor);
+			currentData.position.y = LERP_FLOAT(currentData.position.y, emissionData.position.y, lerpFactor);
+		}
+
+		currentData.lpf.SetCutoff(emissionData.lpf.GetCutoff());
 	}
 
 	void Context::GetOutput(float** dryOut, float** outA, float** outB, float** outC)

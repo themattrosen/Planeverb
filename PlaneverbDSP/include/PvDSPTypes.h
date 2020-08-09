@@ -13,7 +13,7 @@ namespace PlaneverbDSP
 	const constexpr float PV_DSP_T_ER_1 = 0.5f;
 	const constexpr float PV_DSP_T_ER_2 = 1.0f;
 	const constexpr float PV_DSP_T_ER_3 = 3.0f;
-	const constexpr float PV_DSP_MIN_DRY_GAIN = 0.001f;
+	const constexpr float PV_DSP_MIN_DRY_GAIN = 0.01f;
 
 	enum PlaneverbDSPErrorCode
 	{

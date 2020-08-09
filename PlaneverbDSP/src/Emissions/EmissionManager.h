@@ -9,17 +9,17 @@ namespace PlaneverbDSP
 	// data stored per emission
 	struct EmissionData
 	{
-		LowpassFilter lpf[PV_DSP_CHANNEL_COUNT];	// lowpass filters for each channel
-		float occlusion = 1.f;						// occlusion parameter
-		float wetGain = 1.f;						// wet gain for reverb
-		float rt60 = 0.f;							// decay time parameter
-		vec2 direction = { 0, 0 };					// direction parameter
-		vec2 position = { 0, 0 };					// position for distance attenuation
-		vec2 forward = { 0, 0 };					// source directivity parameter
-		vec2 directivity = { 0, 0 };
+		LowpassFilter lpf;			 // lowpass filter for mono mixdown channel
+		float occlusion = 1.f;		 // occlusion parameter
+		float wetGain = 1.f;		 // wet gain for reverb
+		float rt60 = 0.f;			 // decay time parameter
+		vec2 direction = { 0, 0 };	 // direction parameter
+		vec2 position = { 0, 0 };	 // position for distance attenuation
+		vec2 forward = { 0, 0 };	 // forward vector for spatialization
+		vec2 directivity = { 0, 0 }; // source directivity parameter
 		PlaneverbDSPSourceDirectivityPattern directivityPattern;
 		EmissionData(float samplingRate) :
-			lpf{ {samplingRate}, {samplingRate} },
+			lpf{ samplingRate },
 			occlusion(1.f),
 			wetGain(1.f),
 			rt60(0.f),

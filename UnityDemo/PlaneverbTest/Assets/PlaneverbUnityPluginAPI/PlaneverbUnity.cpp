@@ -2,19 +2,6 @@
 #include "IUnityInterface.h"
 #include "Planeverb.h"
 
-//namespace Planeverb
-//{
-//	class UnityPluginInterface : public IUnityInterface
-//	{
-//	public:
-//
-//	private:
-//
-//	};
-//
-//	static UnityPluginInterface g_unityPluginInterface;
-//} // namespace Planeverb
-
 #define PVU_CC UNITY_INTERFACE_API
 #define PVU_EXPORT UNITY_INTERFACE_EXPORT
 
