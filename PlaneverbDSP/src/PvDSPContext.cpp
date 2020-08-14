@@ -346,9 +346,12 @@ namespace PlaneverbDSP
 		{
 			float left = *inputPtr++;
 			float right = *inputPtr++;
-			*inputStoragePtr++ = left + right;
+			*inputStoragePtr++ = (left + right) * 0.5f;
 		}
 		inputStoragePtr = m_inputStorage;
+
+		// process lowpass on copy of input signal
+		emissionData.lpf.Process(m_inputStorage, 0, 1, numFrames, dspParams->lowpass, lerpFactor);
 
 		// apply wet gain
 		{
@@ -376,9 +379,6 @@ namespace PlaneverbDSP
 				processFunc(bufArray[i], inputStoragePtr, targetGainArray[i], currentGainArray[i], numFrames);
 			}
 		}
-
-		// process lowpass on copy of input signal
-		emissionData.lpf.Process(m_inputStorage, 0, 1, numFrames, dspParams->lowpass, lerpFactor);
 
 		// apply dry gains
 		for (int i = 0; i < m_numFrames; ++i)
