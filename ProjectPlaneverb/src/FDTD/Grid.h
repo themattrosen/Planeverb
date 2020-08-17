@@ -68,7 +68,7 @@ namespace Planeverb
 		vec2 m_gridOffset;							// our grid uses only first quadrant, user uses all four, not currently implemented fully
 		unsigned m_responseLength;					// number of samples for an IR
 		unsigned m_samplingRate;					// samples per second
-		PlaneverbExecutionType m_executionType;		// use CPU or GPU (only CPU implemented so far
+		PlaneverbExecutionType m_executionType;		// use CPU or GPU (only CPU implemented so far)
 		unsigned m_maxThreads;						// thread usage
 		int m_resolution;							// grid resolution
 		Real m_z_inv;								// air absorption parameter

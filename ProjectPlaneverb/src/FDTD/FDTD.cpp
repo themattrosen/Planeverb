@@ -88,7 +88,7 @@ namespace Planeverb
 	{
 		// determine pressure and velocity update constants
 		const Real Courant = m_dt / m_dx;
-		const Real Cv = Courant / PV_RHO;
+		const Real Cv = PV_C * Courant * m_z_inv;
 		const Real Cprv = Courant * PV_RHO * PV_C * PV_C;
 
 		// grid constants
@@ -126,65 +126,87 @@ namespace Planeverb
 			// process pressure grid
 			{
                 const int N = loopSize;
-//#pragma omp parallel for
                 for (int i = 0; i < N; ++i)
 				{
-					vec2* normal = &(m_boundaries[i].normal);
-					int normalInd = i + (int)normal->y * (gridy + 1) + (int)normal->x;	// [i + n.x, j + n.y]
-					Cell thisCell = m_grid[i];
+					Cell& thisCell = m_grid[i];
 					int B = (int)thisCell.b;
+					Real beta = (Real)B;
+					// pressure reflectivity of material
 					Real R = m_boundaries[i].absorption;
-					Real absorption = (1.f - R) / (1.f + R);
+					// relative acoustic admittance of material
+					Real Y = (1.f - R) / (1.f + R);
 
-					Cell nextCellX = m_grid[(i + gridy + 1) * B];	// [i + 1, j]
-					Cell nextCellY = m_grid[(i + 1) * B];			// [i, j + 1]
+					// [i + 1, j]
+					const Cell& nextCellX = m_grid[(i + gridy + 1) * B];	
+					// [i, j + 1]
+					const Cell& nextCellY = m_grid[(i + 1) * B];
 
-					m_grid[i].pr = m_grid[normalInd].pr * absorption -
-						Cprv * (Real)B * ((nextCellX.vx - thisCell.vx) + (nextCellY.vy - thisCell.vy));
+					const auto divergence = ((nextCellX.vx - thisCell.vx) + (nextCellY.vy - thisCell.vy));
+					thisCell.pr = thisCell.pr -
+						Cprv * divergence;
+
+					thisCell.pr /= 1.f + (1.f - beta) * m_dt;
 				}
 			}
 
 			// process x component of particle velocity
 			{
 				// eq to for(1 to sizex) for(0 to sizey)
-//#pragma omp parallel for
 				for (int i = gridy + 1; i < loopSize; ++i)
 				{
-					vec2* normal = &(m_boundaries[i].normal);
-					int normalInd = i + (int)normal->y * (gridy + 1) + (int)normal->x;	// [i + n.x, j + n.y]
-					Cell thisCell = m_grid[i];											// [i, j]
-					int B = (int)thisCell.b;
-					Cell nextCell = m_grid[(i - gridy - 1) * B];						// [i - 1, j]
-					Real R = m_boundaries[i].absorption;
-					Real absorption = (1.f - R) / (1.f + R);
+					const vec2& normal = m_boundaries[i].normal;
+					// [i + n.x, j + n.y]
+					int normalInd = i + (int)normal.y * (gridy + 1) + (int)normal.x;
+					const Cell& neighborAirCell = m_grid[normalInd];
 
-					m_grid[i].vx = m_grid[normalInd].vx * absorption -
-						Cv * (Real)B * (thisCell.pr - nextCell.pr);
+					// [i, j]
+					Cell& thisCell = m_grid[i];											
+					int B = (int)thisCell.b;
+					Real beta = (Real)B;
+					Real R = m_boundaries[i].absorption;
+					Real Y = (1.f - R) / (1.f + R);
+
+					// [i - 1, j]
+					const Cell& prevCell = m_grid[(i - gridy - 1) * B];		
+					const Real gradient_x = (thisCell.pr - prevCell.pr);
+
+					const Real airCellUpdate = thisCell.vx - Cv * gradient_x;
+					const Real wallCellUpdate = Y * m_z_inv * neighborAirCell.pr;
+
+					thisCell.vx = beta * airCellUpdate + (1.f - beta) * wallCellUpdate;
 				}
 			}
 
 			// process y component of particle velocity
 			{
 				// eq to for(0 to sizex) for(1 to sizey)
-//#pragma omp parallel for
 				for (int i = 1; i < loopSize; ++i)
 				{
-					vec2 normal = (m_boundaries[i].normal);
-					int normalInd = i + (int)normal.y * (gridy + 1) + (int)normal.x;	// [i + n.x, j + n.y]
-					Cell thisCell = m_grid[i];											// [i, j]
-					int B = thisCell.by;
-					Cell nextCell = m_grid[(i - 1) * B];								// [i, j - 1]
-					Real R = m_boundaries[i].absorption;
-					Real absorption = (1.f - R) / (1.f + R);
+					const vec2& normal = m_boundaries[i].normal;
+					// [i + n.x, j + n.y]
+					int normalInd = i + (int)normal.y * (gridy + 1) + (int)normal.x;	
+					const Cell& neighborAirCell = m_grid[normalInd];
 
-					m_grid[i].vy = m_grid[normalInd].vy * absorption -
-						Cv * (Real)B * (thisCell.pr - nextCell.pr);
+					// [i, j]
+					Cell& thisCell = m_grid[i];											
+					int B = thisCell.by;
+					Real beta = (Real)B;
+					Real R = m_boundaries[i].absorption;
+					Real Y = (1.f - R) / (1.f + R);
+
+					// [i, j - 1]
+					const Cell& prevCell = m_grid[(i - 1) * B];			
+					const Real gradient_y = (thisCell.pr - prevCell.pr);
+
+					const Real airCellUpdate = thisCell.vy - Cv * gradient_y;
+					const Real wallCellUpdate = Y * m_z_inv * neighborAirCell.pr;
+
+					thisCell.vy = beta * airCellUpdate + (1.f - beta) * wallCellUpdate;
 				}
 			}
 
-			// process ABC top/bottom
+			// process absorption top/bottom
 			{
-//#pragma omp parallel for
 				for (int i = 0; i < gridy; ++i)
 				{
 					int index1 = i;
@@ -195,9 +217,8 @@ namespace Planeverb
 				}
 			}
 
-			// process ABC left/right
+			// process absorption left/right
 			{
-//#pragma omp parallel for
 				for (int i = 0; i < gridx; ++i)
 				{
 					int index1 = i * (gridy + 1);
@@ -210,7 +231,6 @@ namespace Planeverb
 
 			// add results to the response cube
 			{
-//#pragma omp parallel for
 				for (int i = 0; i < loopSize; ++i)
 				{
 					m_pulseResponse[i][t] = m_grid[i];
