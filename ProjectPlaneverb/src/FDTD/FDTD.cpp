@@ -140,8 +140,7 @@ namespace Planeverb
 					const auto divergence = ((nextCellX.vx - thisCell.vx) + (nextCellY.vy - thisCell.vy));
 					thisCell.pr = beta * (thisCell.pr - Cprv * divergence);
 					//thisCell.pr /= (1.f + (1.f - beta) * m_dt);
-
-					if (B == 0) thisCell.pr = 1e10f;
+					//if (B == 0) thisCell.pr = 1e10f;
 				}
 			}
 
