@@ -359,11 +359,12 @@ namespace Planeverb
 
 		return size;
 	}
+
 	void CalculateGridParameters(int resolution, Real & dx, Real & dt, unsigned & samplingRate)
 	{
 		Real minWavelength = PV_C / (Real)resolution;
 		dx = minWavelength / PV_POINTS_PER_WAVELENGTH;
-		dt = dx / (PV_C * Real(2.25));
+		dt = dx / (PV_C * Real(1.5));
 		samplingRate = (unsigned)(Real(1.0) / dt);
 	}
 } // namespace Planeverb
