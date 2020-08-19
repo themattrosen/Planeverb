@@ -156,6 +156,7 @@ namespace Planeverb
 		
 		const vec2 newGridSize(m_gridSize.x + 1, m_gridSize.y + 1);
 
+		/*
 		// top
 		if (startY >= 0 && startY < m_gridSize.y)
 		{
@@ -166,8 +167,8 @@ namespace Planeverb
 					int index = INDEX(i, startY, newGridSize);
 					m_boundaries[index].normal = vec2(-1, 0);
 					m_boundaries[index].absorption = transform->absorption;
-					m_grid[i].b = 0;
-					m_grid[i].by = 0;
+					m_grid[index].b = 0;
+					m_grid[index].by = 0;
 				}
 			}
 		}
@@ -236,6 +237,26 @@ namespace Planeverb
 				}
 			}
 		}
+		*/
+
+		for (int i = startY; i < endY; ++i)
+		{
+			if (i >= 0 && i <= m_gridSize.y)
+			{
+				for (int j = startX; j < endX; ++j)
+				{
+					if (j >= 0 && j <= m_gridSize.x)
+					{
+						int index = INDEX(j, i, newGridSize);
+						m_boundaries[index].normal = vec2(0, 0);
+						m_boundaries[index].absorption = transform->absorption;
+
+						m_grid[index].b = 0;
+						m_grid[index].by = 0;
+					}
+				}
+			}
+		}
 	}
 
 	void Grid::RemoveAABB(const AABB * transform)
@@ -260,6 +281,11 @@ namespace Planeverb
 						int index = INDEX(j, i, newGridSize);
 						m_boundaries[index].normal = vec2(0, 0);
 						m_boundaries[index].absorption = PV_ABSORPTION_FREE_SPACE;
+						
+						m_grid[index].b = 1;
+						m_grid[index].by = 1;
+
+						/*
 						if (i == (int)m_gridSize.x || j == (int)m_gridSize.y)
 						{
 							m_grid[index].b = 0;
@@ -275,6 +301,7 @@ namespace Planeverb
 							m_grid[index].b = 1;
 							m_grid[index].by = 1;
 						}
+						*/
 					}
 				}
 			}

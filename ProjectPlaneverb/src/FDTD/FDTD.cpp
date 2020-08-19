@@ -131,21 +131,16 @@ namespace Planeverb
 					Cell& thisCell = m_grid[i];
 					int B = (int)thisCell.b;
 					Real beta = (Real)B;
-					// pressure reflectivity of material
-					Real R = m_boundaries[i].absorption;
-					// relative acoustic admittance of material
-					Real Y = (1.f - R) / (1.f + R);
-
+					//TODO: Check outside bounds access on ends?
 					// [i + 1, j]
-					const Cell& nextCellX = m_grid[(i + gridy + 1) * B];	
+					const Cell& nextCellX = m_grid[i + gridy + 1];	
 					// [i, j + 1]
-					const Cell& nextCellY = m_grid[(i + 1) * B];
+					const Cell& nextCellY = m_grid[i + 1];
 
 					const auto divergence = ((nextCellX.vx - thisCell.vx) + (nextCellY.vy - thisCell.vy));
-					thisCell.pr = thisCell.pr -
-						Cprv * divergence;
-
-					thisCell.pr /= 1.f + (1.f - beta) * m_dt;
+					thisCell.pr = beta * (thisCell.pr - Cprv * divergence);
+					//thisCell.pr /= (1.f + (1.f - beta) * m_dt);
+					//if (B == 0) thisCell.pr = 1e10f;
 				}
 			}
 
@@ -154,10 +149,17 @@ namespace Planeverb
 				// eq to for(1 to sizex) for(0 to sizey)
 				for (int i = gridy + 1; i < loopSize; ++i)
 				{
-					const vec2& normal = m_boundaries[i].normal;
+					//const vec2& normal = m_boundaries[i].normal;
 					// [i + n.x, j + n.y]
-					int normalInd = i + (int)normal.y * (gridy + 1) + (int)normal.x;
-					const Cell& neighborAirCell = m_grid[normalInd];
+					//int normalInd = i + (int)normal.y * (gridy + 1) + (int)normal.x;
+					//const Cell& neighborAirCell = m_grid[normalInd];
+
+					// [i - 1, j]
+					auto in = (i - gridy - 1);
+					const Cell& prevCell = m_grid[in];
+					Real beta_n = (Real)prevCell.b;
+					Real Rn = m_boundaries[in].absorption; 
+					Real Yn = (1.f - Rn) / (1.f + Rn);
 
 					// [i, j]
 					Cell& thisCell = m_grid[i];											
@@ -166,14 +168,13 @@ namespace Planeverb
 					Real R = m_boundaries[i].absorption;
 					Real Y = (1.f - R) / (1.f + R);
 
-					// [i - 1, j]
-					const Cell& prevCell = m_grid[(i - gridy - 1) * B];		
 					const Real gradient_x = (thisCell.pr - prevCell.pr);
-
 					const Real airCellUpdate = thisCell.vx - Cv * gradient_x;
-					const Real wallCellUpdate = Y * m_z_inv * neighborAirCell.pr;
 
-					thisCell.vx = beta * airCellUpdate + (1.f - beta) * wallCellUpdate;
+					const Real Y_boundary = beta * Yn + beta_n * Y;
+					const Real wallCellUpdate = Y_boundary * m_z_inv * (prevCell.pr * beta_n + thisCell.pr * beta);
+
+					thisCell.vx = beta*beta_n * airCellUpdate + (beta_n - beta) * wallCellUpdate;
 				}
 			}
 
@@ -182,26 +183,28 @@ namespace Planeverb
 				// eq to for(0 to sizex) for(1 to sizey)
 				for (int i = 1; i < loopSize; ++i)
 				{
-					const vec2& normal = m_boundaries[i].normal;
-					// [i + n.x, j + n.y]
-					int normalInd = i + (int)normal.y * (gridy + 1) + (int)normal.x;	
-					const Cell& neighborAirCell = m_grid[normalInd];
+					// [i, j - 1]
+					const auto in = i - 1;
+					const Cell& prevCell = m_grid[in];
+					Real beta_n = (Real)prevCell.b;
+					Real Rn = m_boundaries[in].absorption;
+					Real Yn = (1.f - Rn) / (1.f + Rn);
 
 					// [i, j]
 					Cell& thisCell = m_grid[i];											
-					int B = thisCell.by;
+					int B = thisCell.b;
 					Real beta = (Real)B;
 					Real R = m_boundaries[i].absorption;
 					Real Y = (1.f - R) / (1.f + R);
-
-					// [i, j - 1]
-					const Cell& prevCell = m_grid[(i - 1) * B];			
+	
 					const Real gradient_y = (thisCell.pr - prevCell.pr);
-
 					const Real airCellUpdate = thisCell.vy - Cv * gradient_y;
-					const Real wallCellUpdate = Y * m_z_inv * neighborAirCell.pr;
 
-					thisCell.vy = beta * airCellUpdate + (1.f - beta) * wallCellUpdate;
+					const Real Y_boundary = beta * Yn + beta_n * Y;
+					const Real wallCellUpdate = Y_boundary * m_z_inv * (prevCell.pr * beta_n + thisCell.pr * beta);
+
+					//thisCell.vy = beta * airCellUpdate + (1.f - beta) * wallCellUpdate;
+					thisCell.vy = beta * beta_n * airCellUpdate + (beta_n - beta) * wallCellUpdate;
 				}
 			}
 
