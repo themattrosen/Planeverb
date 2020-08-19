@@ -285,7 +285,7 @@ namespace Planeverb
 						m_grid[index].b = 1;
 						m_grid[index].by = 1;
 
-						/*
+						
 						if (i == (int)m_gridSize.x || j == (int)m_gridSize.y)
 						{
 							m_grid[index].b = 0;
@@ -301,7 +301,7 @@ namespace Planeverb
 							m_grid[index].b = 1;
 							m_grid[index].by = 1;
 						}
-						*/
+						
 					}
 				}
 			}
@@ -327,6 +327,8 @@ namespace Planeverb
 			for (int j = 0; j < gridy - 1; ++j)
 			{
 				int index = INDEX(i, j, newGridSize);
+
+				/* old version based off of normal
 				if(m_boundaries[index].normal.x == m_boundaries[index].normal.y && m_boundaries[index].normal.x == 0)
 				{
 					std::cout << " .";
@@ -347,7 +349,18 @@ namespace Planeverb
 						else
 							std::cout << "y^";
 					}
+				}*/
+
+				const Cell& cell = m_grid[index];
+				if (cell.b || cell.by)
+				{
+					std::cout << " .";
 				}
+				else
+				{
+					std::cout << "00";
+				}
+
 			}
 
 			std::cout << std::endl;

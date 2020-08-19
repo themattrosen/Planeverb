@@ -59,6 +59,7 @@ namespace Planeverb
 		Foliage,
 		Metal,
 		Ice,
+		Test,
 
 		Count
 	}
@@ -238,7 +239,8 @@ namespace Planeverb
 			0.921954446F,	// Awning,
 			0.911043358F,	// Foliage,
 			0.948683298F,	// Metal,
-			0.994987437F	// Ice,
+			0.994987437F,	// Ice,
+			0.97f			// Test
 		};	
 	}
 } // namespace PlaneverCountb
