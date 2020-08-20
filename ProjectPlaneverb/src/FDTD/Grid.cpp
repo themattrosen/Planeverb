@@ -112,19 +112,6 @@ namespace Planeverb
 			m_pulseResponse[i].resize(lengthPerResponse, Cell());
 		}
 
-		// configure boundary type
-		switch (config->gridBoundaryType)
-		{
-		case pv_AbsorbingBoundary:
-			m_z_inv = PV_INV_Z_AIR;
-			break;
-		case pv_ReflectingBoundary:
-			m_z_inv = PV_INV_Z_REFLECT; // not working rn, not sure why
-			break;
-		default:
-			throw pv_InvalidConfig;
-		}
-		
 		// precompute Gaussian pulse
 		GaussianPulse(config, m_samplingRate, m_pulse, m_responseLength);
 	}
