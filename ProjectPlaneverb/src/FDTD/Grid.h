@@ -71,6 +71,5 @@ namespace Planeverb
 		PlaneverbExecutionType m_executionType;		// use CPU or GPU (only CPU implemented so far)
 		unsigned m_maxThreads;						// thread usage
 		int m_resolution;							// grid resolution
-		Real m_z_inv;								// air absorption parameter
 	};
 } // namespace Planeverb
