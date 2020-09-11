@@ -35,6 +35,12 @@ namespace Planeverb
 		pv_ReflectingBoundary,	// walls of the grid reflect acoustic energy - !!! Not supported !!!
 	};
 
+	enum PlaneverbGridCenteringType
+	{
+		pv_StaticCentering,		// acoustic grid stays statically taking snapshots of the same section of world space
+		pv_DynamicCentering		// acoustic grid centers itself dynamically on the listener
+	};
+
 	struct PlaneverbConfig
 	{
 		// grid size in meters
@@ -55,8 +61,11 @@ namespace Planeverb
 		unsigned maxThreadUsage = 0; // can specify number of threads, 0 means as many as possible, minimum 2 otherwise
 		PlaneverbExecutionType threadExecutionType = pv_CPU; // CPU or GPU
 
-		// grid world offset - !!! Not supported !!!
-		vec2 gridWorldOffset = { 0.f, 0.f };
+		// grid centering
+		PlaneverbGridCenteringType gridCenteringType;	// can either stay statically centered, or center itself on the listener
+		vec2 gridWorldOffset = { 0.f, 0.f };			// offset from the center in meters. 
+														// for static centering, offset is off from the origin
+														// for dynamic centering, offset is off of the listener position
 	};
 
 	// Final acoustic output for an emitter
@@ -100,6 +109,7 @@ namespace Planeverb
 	const constexpr Real PV_DELAY_CLOSE_THRESHOLD = (Real)5.f;			// "close enough" delay threshold when analyzing for direction
 	const constexpr Real PV_IMPULSE_RESPONSE_S = PV_SQRT_2 * Real(12.5) / PV_C + Real(0.25);			// number of seconds to collect per impulse response
 	//                                                             ^ should be half of the scene width
+	const constexpr Real PV_LISTENER_DELTA_THRESHOLD = Real(0.2f);
 
 	// struct to represent grid cells
 	// 16 bytes

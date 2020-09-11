@@ -9,6 +9,7 @@ namespace Planeverb
 
 	// struct to represent wall information
 	// 12 bytes
+	//TODO get rid of this, pack absorption into cell
 	struct BoundaryInfo
 	{
 		vec2 normal;		// wall normal, (0, 0) if no wall
@@ -39,12 +40,13 @@ namespace Planeverb
 		unsigned GetMaxThreads() const { return m_maxThreads; }
 		const vec2& GetGridSize() const { return m_gridSize; }
 		const vec2& GetGridOffset() const { return m_gridOffset; }
+		PlaneverbGridCenteringType GetCenteringType() const { return m_centering; }
 		Real GetDX() const { return m_dx; }
 		int GetResolution() const { return m_resolution; }
 
 		void AddAABB(const AABB* transform);
 		void RemoveAABB(const AABB* transform);
-		void UpdateAABB(const AABB* oldTransform, const AABB* newTransform);
+		void ClearAABBs();
 
 		void PrintGrid();
 		static unsigned GetMemoryRequirement(const struct PlaneverbConfig* config);
@@ -71,5 +73,6 @@ namespace Planeverb
 		PlaneverbExecutionType m_executionType;		// use CPU or GPU (only CPU implemented so far)
 		unsigned m_maxThreads;						// thread usage
 		int m_resolution;							// grid resolution
+		PlaneverbGridCenteringType m_centering;		// grid centering type
 	};
 } // namespace Planeverb

@@ -83,7 +83,7 @@ namespace Planeverb
 					PROFILE_TIME(analyzer->AnalyzeResponses(listenerPos), "Time for Analyzing Response");
 
 					// update geometry in grid
-					geometry->PushGeometryChanges();
+					geometry->PushGeometryChanges(listenerPos);
 
 					// update listener position and running flag
 					listenerPos = context->GetListenerPosition();

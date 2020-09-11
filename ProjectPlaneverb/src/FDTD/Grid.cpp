@@ -135,6 +135,7 @@ namespace Planeverb
 
 	void Grid::AddAABB(const AABB * transform)
 	{
+		//TODO
 		// define edges of the AABB
 		const int startY = (int)((transform->position.y - transform->height / (Real)2.f + m_gridOffset.x) * ((Real)1.f / m_dx));
 		const int startX = (int)((transform->position.x - transform->width  / (Real)2.f + m_gridOffset.y) * ((Real)1.f / m_dx));
@@ -249,6 +250,7 @@ namespace Planeverb
 	void Grid::RemoveAABB(const AABB * transform)
 	{
 		// define edges of the AABB
+		// TODO
 		int startY = (int)((transform->position.y - transform->height / (Real)2.f + m_gridOffset.y) * ((Real)1.f / m_dx));
 		int startX = (int)((transform->position.x - transform->width  / (Real)2.f + m_gridOffset.x) * ((Real)1.f / m_dx));
 		int endY   = (int)((transform->position.y + transform->height / (Real)2.f + m_gridOffset.y) * ((Real)1.f / m_dx));
@@ -295,11 +297,9 @@ namespace Planeverb
 		}
 	}
 
-	void Grid::UpdateAABB(const AABB * oldTransform, const AABB * newTransform)
+	void Grid::ClearAABBs()
 	{
-		// remove then re-add the new AABB
-		RemoveAABB(oldTransform);
-		AddAABB(newTransform);
+		//TODO
 	}
 
 	// Debug print the grid
@@ -315,29 +315,6 @@ namespace Planeverb
 			{
 				int index = INDEX(i, j, newGridSize);
 
-				/* old version based off of normal
-				if(m_boundaries[index].normal.x == m_boundaries[index].normal.y && m_boundaries[index].normal.x == 0)
-				{
-					std::cout << " .";
-				}
-				else
-				{
-					if (m_boundaries[index].normal.x != 0.f)
-					{
-						if (m_boundaries[index].normal.x > 0)
-							std::cout << "x>";
-						else
-							std::cout << "<x";
-					}
-					else
-					{
-						if (m_boundaries[index].normal.y > 0)
-							std::cout << "yv";
-						else
-							std::cout << "y^";
-					}
-				}*/
-
 				const Cell& cell = m_grid[index];
 				if (cell.b || cell.by)
 				{
@@ -350,10 +327,10 @@ namespace Planeverb
 
 			}
 
-			std::cout << std::endl;
+			std::cout << '\n';
 		}
 
-		std::cout << std::endl;
+		std::cout << '\n';
 	}
 
 	unsigned Grid::GetMemoryRequirement(const PlaneverbConfig * config)

@@ -49,7 +49,8 @@ namespace Planeverb
 		m_highestID(),
 		m_geometryChanges(),
 		m_mutex(),
-		m_gridPtr(grid)
+		m_gridPtr(grid),
+		m_centeringType(grid->GetCenteringType())
 	{
 		// reserve some memory to avoid vector resizing
 		m_geometryChanges.reserve(20);
@@ -104,7 +105,10 @@ namespace Planeverb
 
 		// lock to add change to change queue
 		GLock lock(m_mutex);
-		m_geometryChanges.push_back({ ct_Remove, m_geometry[id] });
+		if (m_centeringType == pv_StaticCentering)
+		{
+			m_geometryChanges.push_back({ ct_Remove, m_geometry[id] });
+		}
 		std::memset(&(m_geometry[id]), 0, sizeof(AABB));
 		m_openSlots.push_back(id);
 	}
@@ -115,22 +119,51 @@ namespace Planeverb
 
 		// lock to add a remove and add to change queue
 		GLock lock(m_mutex);
-		m_geometryChanges.push_back({ ct_Remove, m_geometry[id] });
-		m_geometry[id] = *transform;
-		m_geometryChanges.push_back({ ct_Add, m_geometry[id] });
+		if (m_centeringType == pv_StaticCentering)
+		{
+			m_geometryChanges.push_back({ ct_Remove, m_geometry[id] });
+			m_geometry[id] = *transform;
+			m_geometryChanges.push_back({ ct_Add, m_geometry[id] });
+		}
+		else
+		{
+			m_geometry[id] = *transform;
+		}
 	}
 
-	void GeometryManager::PushGeometryChanges()
+	void GeometryManager::PushGeometryChanges(const vec3& listenerPos)
 	{
 		// lock to process change queue
 		GLock lock(m_mutex);
-		size_t size = m_geometryChanges.size();
 
+		// for dynamic centering on the listener,
+		// all AABBs are cleared from the grid and all existing geometry
+		// is added back in with the new listener position
+		if (m_centeringType == pv_DynamicCentering)
+		{
+			Real listenerDeltaX = std::abs(listenerPos.x - m_oldListenerPosition.x);
+			Real listenerDeltaZ = std::abs(listenerPos.z - m_oldListenerPosition.z);
+			if (listenerDeltaX >= PV_LISTENER_DELTA_THRESHOLD || listenerDeltaZ >= PV_LISTENER_DELTA_THRESHOLD)
+			{
+				const AABB* transformArray = m_geometry.data();
+				const size_t size = m_geometry.size();
+				for (size_t i = 0; i < size; ++i)
+				{
+					m_geometryChanges.push_back({ ct_Add, *transformArray++ });
+				}
+
+				m_gridPtr->ClearAABBs();
+				m_oldListenerPosition = listenerPos;
+			}
+		}
+
+		size_t size = m_geometryChanges.size();
+		const GeometryChange* changeArray = m_geometryChanges.data();
 		// for each change in the queue
 		for (size_t i = 0; i < size; ++i)
 		{
 			// process change in the grid handle
-			GeometryChange& next = m_geometryChanges[i];
+			const GeometryChange& next = *changeArray++;
 			switch (next.type)
 			{
 			case ct_Add:
@@ -150,6 +183,7 @@ namespace Planeverb
 			m_gridPtr->PrintGrid();
 		#endif
 	}
+
 	unsigned GeometryManager::GetMemoryRequirement(const PlaneverbConfig * config)
 	{
 		return 0;
