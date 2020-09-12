@@ -94,9 +94,18 @@ namespace Planeverb
 		const int gridy = (int)m_gridSize.y;
 		const vec2 dim = m_gridSize;
 		const vec2 incdim(dim.x + 1, dim.y + 1);
-		const int listenerPosX = (int)((listener.x + m_gridOffset.x) / m_dx);
-		const int listenerPosY = (int)((listener.z + m_gridOffset.y) / m_dx);
-		const int listenerPos = listenerPosX * (gridy + 1) + listenerPosY;
+		int listenerPosX;
+		int listenerPosY;
+		if (m_centering == pv_StaticCentering)
+		{
+			WorldToGrid({ listener.x, listener.z }, listenerPosX, listenerPosY);
+		}
+		else
+		{
+			listenerPosX = gridx / 2;
+			listenerPosY = gridy / 2;
+		}
+		const int listenerPos = INDEX2(listenerPosX, listenerPosY, gridy + 1);
 		const int responseLength = m_responseLength;
 		int loopSize = (int)(incdim.x) * (int)(incdim.y);
 
@@ -149,14 +158,14 @@ namespace Planeverb
 					auto in = (i - gridy - 1);
 					const Cell& prevCell = m_grid[in];
 					Real beta_n = (Real)prevCell.b;
-					Real Rn = m_boundaries[in].absorption; 
+					Real Rn = prevCell.absorption; 
 					Real Yn = (1.f - Rn) / (1.f + Rn);
 
 					// [i, j]
 					Cell& thisCell = m_grid[i];											
 					int B = (int)thisCell.b;
 					Real beta = (Real)B;
-					Real R = m_boundaries[i].absorption;
+					Real R = thisCell.absorption;
 					Real Y = (1.f - R) / (1.f + R);
 
 					const Real gradient_x = (thisCell.pr - prevCell.pr);
@@ -178,14 +187,14 @@ namespace Planeverb
 					const auto in = i - 1;
 					const Cell& prevCell = m_grid[in];
 					Real beta_n = (Real)prevCell.b;
-					Real Rn = m_boundaries[in].absorption;
+					Real Rn = prevCell.absorption;
 					Real Yn = (1.f - Rn) / (1.f + Rn);
 
 					// [i, j]
 					Cell& thisCell = m_grid[i];											
 					int B = thisCell.b;
 					Real beta = (Real)B;
-					Real R = m_boundaries[i].absorption;
+					Real R = thisCell.absorption;
 					Real Y = (1.f - R) / (1.f + R);
 	
 					const Real gradient_y = (thisCell.pr - prevCell.pr);

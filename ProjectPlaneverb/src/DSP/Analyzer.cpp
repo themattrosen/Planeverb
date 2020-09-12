@@ -200,8 +200,8 @@ namespace Planeverb
             {
                 const int listenerX = (int)(listenerPos.x * (1.f / m_dx));
                 const int listenerY = (int)(listenerPos.z * (1.f / m_dx));
-                const int emitterX = gridIndex.x;
-                const int emitterY = gridIndex.y;
+                const int emitterX = (int)gridIndex.x;
+                const int emitterY = (int)gridIndex.y;
 
                 EfreePr = m_freeGrid->GetEFreePerR(listenerX, listenerY, emitterX, emitterY);
             }

@@ -21,6 +21,7 @@
 
 // helper defines
 #define INDEX(row, col, dim) ( (row) * ((unsigned)(dim).x) + (col) )
+#define INDEX2(row, col, maxy) ( (row) * (maxy) + (col) )
 #define INDEX_TO_POS(ISET, JSET, i, dim) (ISET) = (i) / (unsigned)(dim).x; (JSET) = (i) % (unsigned)(dim).x
 #define INDEX3(row, col, t, dim, maxT) ( (t) + (maxT) * (INDEX((row), (col), (dim))) ) 
 #define INDEX3_2(x, y, z, xmax, ymax, zmax) ((x * (ymax) * (zmax)) + (y * (zmax)) + z)
@@ -31,7 +32,7 @@
 // Redefine these to true to enable debug print information to stdout
 #define PRINT_PROFILE false
 #define PRINT_PROFILE_SECTION false
-#define PRINT_GRID false
+#define PRINT_GRID true
 
 #if PRINT_PROFILE
 #define PROFILE_TIME(line, tag)	\

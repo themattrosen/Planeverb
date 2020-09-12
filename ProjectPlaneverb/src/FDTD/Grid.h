@@ -7,21 +7,6 @@ namespace Planeverb
 {
 	void CalculateGridParameters(int resolution, Real& dx, Real& dt, unsigned& samplingRate);
 
-	// struct to represent wall information
-	// 12 bytes
-	//TODO get rid of this, pack absorption into cell
-	struct BoundaryInfo
-	{
-		vec2 normal;		// wall normal, (0, 0) if no wall
-		Real absorption;	// absorption coefficient, 0 if free space
-		BoundaryInfo(const vec2& n = vec2(0, 0), Real a = Real(1.0)) :
-			normal(n),
-			absorption(a)
-		{}
-
-		BoundaryInfo& operator=(const BoundaryInfo&) = default;
-	};
-
 	// Grid system
 	class Grid
 	{
@@ -47,13 +32,13 @@ namespace Planeverb
 		void AddAABB(const AABB* transform);
 		void RemoveAABB(const AABB* transform);
 		void ClearAABBs();
+		void WorldToGrid(const vec2& worldspace, int& gridx, int& gridy) const;
 
 		void PrintGrid();
 		static unsigned GetMemoryRequirement(const struct PlaneverbConfig* config);
 	private:
 		char* m_mem;								// memory pool
 		Cell* m_grid;								// cell grid
-		BoundaryInfo* m_boundaries;					// wall information
 
 		// originally used a 3D array of Cells for pulse response, 
 		// but each access to it was probably a cache miss because of the length

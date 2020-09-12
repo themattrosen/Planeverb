@@ -120,13 +120,15 @@ namespace Planeverb
 		Real vy;	// y component of particle velocity
 		short b;	// B field packed into 2 2 byte fields
 		short by;	// B field packed into 2 2 byte fields
+		Real absorption; // absorption coefficient
 
-		Cell(Real _pr = 0.f, Real _vx = 0.f, Real _vy = 0.f, int boundaryCoef = 1, int _by = 1) :
+		Cell(Real _pr = 0.f, Real _vx = 0.f, Real _vy = 0.f, int boundaryCoef = 1, int _by = 1, Real a = PV_ABSORPTION_FREE_SPACE) :
 			pr(_pr),
 			vx(_vx),
 			vy(_vy),
 			b((short)boundaryCoef),
-			by((short)_by)
+			by((short)_by),
+			absorption(a)
 		{}
 	};
 
