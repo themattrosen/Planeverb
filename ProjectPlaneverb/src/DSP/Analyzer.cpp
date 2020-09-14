@@ -58,8 +58,6 @@ namespace Planeverb
         int gridSize = (int)m_gridX * (int)m_gridY;
 
 		vec3 listenerPos = listenerPosGiven;
-		listenerPos.x += m_grid->GetGridOffset().x;
-		listenerPos.z += m_grid->GetGridOffset().y;
 
 		// reset delay values
 		Real* delayLooper = m_delaySamples;
@@ -106,9 +104,8 @@ namespace Planeverb
 	const AnalyzerResult * Analyzer::GetResponseResult(const vec3 & emitterPos) const 
 	{
 		// retrieve analyzer result based off of an emitter position in world space
-		const auto& offset = m_grid->GetGridOffset();
-		unsigned posX = (unsigned)((emitterPos.x + offset.x) / m_dx); //(unsigned)(emitterPos.x + offset.x);
-		unsigned posY = (unsigned)((emitterPos.z + offset.y) / m_dx); //(unsigned)(emitterPos.z + offset.y);
+		int posX, posY;
+		m_grid->WorldToGrid({ emitterPos.x, emitterPos.z }, posX, posY);
 		if (posX > m_gridX || posY > m_gridY)
 			return nullptr;
 		const auto* res = &(m_results[INDEX(posX, posY, vec2((Real)m_gridX, (Real)m_gridY))]);

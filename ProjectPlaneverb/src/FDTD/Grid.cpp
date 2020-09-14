@@ -352,14 +352,21 @@ namespace Planeverb
 	{
 		if (m_centering == pv_DynamicCentering)
 		{
-			//TODO
+			vec2 toPlayerSpace = 
+			{
+				worldspace.x - m_oldListenerPos.x + m_gridDimensions.x / Real(2.0),
+				worldspace.y - m_oldListenerPos.y + m_gridDimensions.y / Real(2.0)
+			};
+
+			gridx = (int)(toPlayerSpace.x / m_dx);
+			gridy = (int)(toPlayerSpace.y / m_dx);
 		}
 		else
 		{
 			vec2 toStaticSpace =
 			{
-				worldspace.x + m_gridDimensions.x / Real(2.0) + m_gridOffset.x,
-				worldspace.y + m_gridDimensions.y / Real(2.0) + m_gridOffset.y
+				worldspace.x + m_gridDimensions.x / Real(2.0) - m_gridOffset.x,
+				worldspace.y + m_gridDimensions.y / Real(2.0) - m_gridOffset.y
 			};
 			
 			gridx = (int)(toStaticSpace.x / m_dx);

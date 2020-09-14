@@ -14,10 +14,10 @@ int main()
 	Planeverb::PlaneverbConfig config;
 	config.gridResolution = Planeverb::pv_LowResolution;
 	config.gridBoundaryType = Planeverb::pv_AbsorbingBoundary;
-	config.gridCenteringType = Planeverb::pv_StaticCentering;
+	config.gridCenteringType = Planeverb::pv_DynamicCentering;
 	config.gridSizeInMeters = Planeverb::vec2(10.f, 10.f);
 	config.tempFileDirectory = ".";
-	config.gridWorldOffset = { 5.f, 5.f };
+	config.gridWorldOffset = { 0, 0 };
 	config.maxThreadUsage = 1;
 	
 	Planeverb::Init(&config);

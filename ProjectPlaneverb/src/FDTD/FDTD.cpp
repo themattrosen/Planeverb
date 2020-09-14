@@ -106,6 +106,7 @@ namespace Planeverb
 			listenerPosY = gridy / 2;
 		}
 		const int listenerPos = INDEX2(listenerPosX, listenerPosY, gridy + 1);
+		m_oldListenerPos = { listener.x, listener.z };
 		const int responseLength = m_responseLength;
 		int loopSize = (int)(incdim.x) * (int)(incdim.y);
 

@@ -59,5 +59,6 @@ namespace Planeverb
 		unsigned m_maxThreads;						// thread usage
 		int m_resolution;							// grid resolution
 		PlaneverbGridCenteringType m_centering;		// grid centering type
+		vec2 m_oldListenerPos;						// listener position from last grid processing frame
 	};
 } // namespace Planeverb
