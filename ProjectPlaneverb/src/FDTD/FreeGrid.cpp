@@ -1,4 +1,5 @@
 #include <FDTD\FreeGrid.h>
+#include <Context\PvContext.h>
 #include <PvDefinitions.h>
 
 namespace Planeverb
@@ -21,8 +22,11 @@ namespace Planeverb
 			throw pv_NotEnoughMemory;
 		}
 
-        m_dx = m_grid->GetDX();
-        m_EFree = SimulateFreeFieldEnergy(config);
+        m_dx = Context::GetGlobals().gridDX;
+		PlaneverbConfig simpleConfig = *config;
+		simpleConfig.gridCenteringType = pv_StaticCentering;
+		simpleConfig.gridWorldOffset = { 0, 0 };
+        m_EFree = SimulateFreeFieldEnergy(&simpleConfig);
 		
 		// delete the temporary grid
 		delete m_grid;
@@ -38,14 +42,10 @@ namespace Planeverb
 		// grid should be deleted already
 	}
 
-	Real FreeGrid::GetEFreePerR(int listenerIndX, int listenerIndY, int emitterIndX, int emitterIndY)
+	Real FreeGrid::GetEFreePerR(Real lX, Real lY, Real eX, Real eY)
 	{
 		// find Euclidean distance between listener and emitter
 		Real efree = m_EFree;
-		Real lX = (Real)listenerIndX * m_dx;
-		Real lY = (Real)listenerIndY * m_dx;
-		Real eX = (Real)emitterIndX * m_dx;
-		Real eY = (Real)emitterIndY * m_dx;
 
 		Real r = std::sqrt((eX - lX) * (eX - lX) +
 			(eY - lY) * (eY - lY));
@@ -70,22 +70,23 @@ namespace Planeverb
 
 	Real FreeGrid::SimulateFreeFieldEnergy(const PlaneverbConfig* config)
 	{
-		vec2 gridScale = m_grid->GetGridSize();
-		int gridx = (int)gridScale.x;
-		int gridy = (int)gridScale.y;
-		int sizePerGrid = gridx * gridy;
-		
-		int listenerX = gridx / 2;
-		int listenerY = gridy / 2;
-		int emitterX = listenerX + (int)(1.f / m_dx);
-		int emitterY = listenerY;
+		const auto& globals = Context::GetGlobals();
+
+		vec3 listenerWorldPos3 = { 0, 0, 0 };
+		vec2 emitterWorldPos = { 1, 0 };
 
 		// generate a set of IRs in the grid, calculate the free energy
-		m_grid->GenerateResponse(vec3(listenerX * m_dx, 0, listenerY * m_dx));
-		const Cell* response = m_grid->GetResponse(vec2((float)emitterX, (float)emitterY));
-        Real freeFieldEnergy = CalculateEFree(response, m_grid->GetResponseSize(), (int)m_grid->GetSamplingRate());
+		m_grid->GenerateResponse(listenerWorldPos3);
+		const Cell* response = m_grid->GetResponse(emitterWorldPos);
+        Real freeFieldEnergy = CalculateEFree(response, globals.responseSampleLength, globals.samplingRate);
 
         // discrete distance on grid
+		int emitterX, emitterY;
+		int listenerX, listenerY;
+		vec2 listenerWorldPos2 = { listenerWorldPos3.x, listenerWorldPos3.z };
+		m_grid->WorldToGrid(emitterWorldPos, emitterX, emitterY);
+		m_grid->WorldToGrid(listenerWorldPos2, listenerX, listenerY);
+
         const Real r = Real(emitterX - listenerX) * m_dx;
         // Normalize to exactly 1m assuming 1/r energy attenuation
         freeFieldEnergy *= r;
@@ -93,10 +94,10 @@ namespace Planeverb
         return freeFieldEnergy;
 	}
 
-	Real FreeGrid::CalculateEFree(const Cell * response, int responseLength, int samplingRate) const
+	Real FreeGrid::CalculateEFree(const Cell * response, int responseLength, Real samplingRate) const
 	{
 		// Dry duration, plus delay to get 1m away
-        int numSamples = (int)((PV_DRY_GAIN_ANALYSIS_LENGTH) * ((Real)samplingRate)) + (int)(((Real)1.f / PV_C) * (Real)samplingRate);
+        int numSamples = (int)((PV_DRY_GAIN_ANALYSIS_LENGTH) * samplingRate) + (int)((Real(1) / PV_C) * samplingRate);
 		PV_ASSERT(numSamples < responseLength);
 		Real efree = 0.f;
 

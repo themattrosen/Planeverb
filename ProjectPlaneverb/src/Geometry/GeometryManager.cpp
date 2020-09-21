@@ -49,8 +49,7 @@ namespace Planeverb
 		m_highestID(),
 		m_geometryChanges(),
 		m_mutex(),
-		m_gridPtr(grid),
-		m_centeringType(grid->GetCenteringType())
+		m_gridPtr(grid)
 	{
 		// reserve some memory to avoid vector resizing
 		m_geometryChanges.reserve(20);
@@ -103,9 +102,11 @@ namespace Planeverb
 	{
 		PV_ASSERT(id != PV_INVALID_PLANE_OBJECT_ID);
 
+		const auto& globals = Context::GetGlobals();
+
 		// lock to add change to change queue
 		GLock lock(m_mutex);
-		if (m_centeringType == pv_StaticCentering)
+		if (globals.config.gridCenteringType == pv_StaticCentering)
 		{
 			m_geometryChanges.push_back({ ct_Remove, m_geometry[id] });
 		}
@@ -117,9 +118,11 @@ namespace Planeverb
 	{
 		PV_ASSERT(id != PV_INVALID_PLANE_OBJECT_ID);
 
+		const auto& globals = Context::GetGlobals();
+
 		// lock to add a remove and add to change queue
 		GLock lock(m_mutex);
-		if (m_centeringType == pv_StaticCentering)
+		if (globals.config.gridCenteringType == pv_StaticCentering)
 		{
 			m_geometryChanges.push_back({ ct_Remove, m_geometry[id] });
 			m_geometry[id] = *transform;
@@ -133,13 +136,15 @@ namespace Planeverb
 
 	void GeometryManager::PushGeometryChanges(const vec3& listenerPos)
 	{
+		const auto& globals = Context::GetGlobals();
+
 		// lock to process change queue
 		GLock lock(m_mutex);
 
 		// for dynamic centering on the listener,
 		// all AABBs are cleared from the grid and all existing geometry
 		// is added back in with the new listener position
-		if (m_centeringType == pv_DynamicCentering)
+		if (globals.config.gridCenteringType == pv_DynamicCentering)
 		{
 			Real listenerDeltaX = std::abs(listenerPos.x - m_oldListenerPosition.x);
 			Real listenerDeltaZ = std::abs(listenerPos.z - m_oldListenerPosition.z);

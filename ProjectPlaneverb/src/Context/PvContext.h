@@ -21,7 +21,7 @@ namespace Planeverb
 		~Context();
 
 		// getters
-		const PlaneverbConfig* GetConfig() const { return &m_config; }
+		static Globals& GetGlobals();
 		Grid* GetGrid() { return m_grid; }
 		FreeGrid* GetFreeGrid() { return m_freeGrid; }
 		GeometryManager* GetGeometryManager() { return m_geometry; }
@@ -35,7 +35,7 @@ namespace Planeverb
 		void SetListenerPosition(const vec3& listenerPos) { m_listenerPos = listenerPos; }
 		
 	private:
-		PlaneverbConfig m_config;			// copy of the input config
+		static Globals s_globals;			// copy of the input config
 		std::thread m_backgroundProcessor;	// background thread handle
 		bool m_isRunning = true;			// running flag used by thread
 

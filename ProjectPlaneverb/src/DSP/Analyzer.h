@@ -40,12 +40,5 @@ namespace Planeverb
 
 		Grid* m_grid;				// handle to the grid system
 		FreeGrid* m_freeGrid;		// handle to the free grid system
-		unsigned m_gridX, m_gridY;	// number of cells in the grid x and y
-		Real m_dx;					// meters per grid for conversions
-		unsigned m_responseLength;	// number of samples per IR
-		unsigned m_samplingRate;	// sampling rate for conversions (samples per second)
-		unsigned m_numThreads;		// number of threads the module is allowed to use
-		int m_resolution;			// grid resolution
-
 	};
 } // namespace Planeverb

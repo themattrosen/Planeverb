@@ -1,6 +1,7 @@
 #include <DSP\Analyzer.h>
 #include <FDTD\Grid.h>
 #include <FDTD\FreeGrid.h>
+#include <Context\PvContext.h>
 #include <PvDefinitions.h>
 
 #include <omp.h>
@@ -17,19 +18,15 @@ namespace Planeverb
 		m_mem(mem),	m_grid(grid), m_freeGrid(freeGrid), m_results(nullptr)
 	{
 		// set up data
-		vec2 gridSize = m_grid->GetGridSize();
-		m_gridX = (unsigned)gridSize.x;
-		m_gridY = (unsigned)gridSize.y; 
-		m_responseLength = m_grid->GetResponseSize();
-		m_samplingRate = m_grid->GetSamplingRate();
-		m_dx = grid->GetDX();
-		m_numThreads = grid->GetMaxThreads();
-		m_resolution = grid->GetResolution();
-
+		const auto& globals = Context::GetGlobals();
+		vec2 gridSize = globals.gridSize;
+		unsigned gridX = (unsigned)gridSize.x;
+		unsigned gridY = (unsigned)gridSize.y; 
+		
 		// find size for both grids, allocate pool of memory
 		unsigned size =
-			m_gridX * m_gridY * sizeof(AnalyzerResult) +
-			m_gridX * m_gridY * sizeof(Real);
+			gridX * gridY * sizeof(AnalyzerResult) +
+			gridX * gridY * sizeof(Real);
 		if (!m_mem)
 		{
 			throw pv_NotEnoughMemory;
@@ -37,25 +34,26 @@ namespace Planeverb
 
 		// set grid ptrs into pool
 		m_results = reinterpret_cast<AnalyzerResult*>(m_mem);
-		m_delaySamples = reinterpret_cast<Real*>(m_mem + m_gridX * m_gridY * sizeof(AnalyzerResult));
+		m_delaySamples = reinterpret_cast<Real*>(m_mem + gridX * gridY * sizeof(AnalyzerResult));
 	}
 	Analyzer::~Analyzer()
 	{
-		// delete pool of memory
-		//delete[] m_mem;
+		// memory owned by context, no deletion required
 	}
 
 	void Analyzer::AnalyzeResponses(const vec3& listenerPosGiven)
 	{
-		vec2 dim((Real)m_gridX, (Real)m_gridY);
+		const auto& globals = Context::GetGlobals();
+		vec2 dim = globals.gridSize;
 
 		// set OMP thread count
-		if (m_numThreads == 0)
+		if (globals.config.maxThreadUsage == 0)
 			omp_set_num_threads(omp_get_max_threads());
 		else
-			omp_set_num_threads(m_numThreads);
+			omp_set_num_threads(globals.config.maxThreadUsage);
 
-        int gridSize = (int)m_gridX * (int)m_gridY;
+        int gridSize = (int)dim.x * (int)dim.y;
+		int responseLength = globals.responseSampleLength;
 
 		vec3 listenerPos = listenerPosGiven;
 
@@ -72,14 +70,13 @@ namespace Planeverb
 		for (int serialIndex = 0; serialIndex < gridSize; ++serialIndex)
 		{
 			// convert index to grid position, to retrieve IR
-			vec2 gridIndex;
+			vec2 worldSpace;
 			unsigned gridX, gridY;
 			INDEX_TO_POS(gridX, gridY, serialIndex, dim);
-			gridIndex.x = (Real)gridX;
-			gridIndex.y = (Real)gridY;
-			const Cell* response = m_grid->GetResponse(gridIndex);
+			m_grid->GridToWorld(gridX, gridY, worldSpace);
+			const Cell* response = m_grid->GetResponse(worldSpace);
 
-            EncodeResponse(serialIndex, gridIndex, response, listenerPos, m_responseLength);
+            EncodeResponse(serialIndex, worldSpace, response, listenerPos, responseLength);
 		}
 
 		// run a post processing step to find directions based off of delays
@@ -89,33 +86,33 @@ namespace Planeverb
 		for (int i = 0; i < gridSize; ++i)
 		{
 			// retrieve IR
-			vec2 gridIndex;
+			vec2 worldSpace;
 			unsigned gridX, gridY;
 			INDEX_TO_POS(gridX, gridY, i, dim);
-			gridIndex.x = (Real)gridX;
-			gridIndex.y = (Real)gridY;
-			const Cell* response = m_grid->GetResponse(gridIndex);
+			m_grid->GridToWorld(gridX, gridY, worldSpace);
+			const Cell* response = m_grid->GetResponse(worldSpace);
 
 			// analyze for listener direction
-			m_results[i].direction = EncodeListenerDirection(i, response, listenerPos, m_responseLength);
+			m_results[i].direction = EncodeListenerDirection(i, response, listenerPos, responseLength);
 		}
 	}
 
 	const AnalyzerResult * Analyzer::GetResponseResult(const vec3 & emitterPos) const 
 	{
 		// retrieve analyzer result based off of an emitter position in world space
+		const auto& globals = Context::GetGlobals();
 		int posX, posY;
 		m_grid->WorldToGrid({ emitterPos.x, emitterPos.z }, posX, posY);
-		if (posX > m_gridX || posY > m_gridY)
+		if (posX > globals.gridSize.x || posY > globals.gridSize.y)
 			return nullptr;
-		const auto* res = &(m_results[INDEX(posX, posY, vec2((Real)m_gridX, (Real)m_gridY))]);
+		const auto* res = &(m_results[INDEX(posX, posY, globals.gridSize)]);
 		return res;
 	}
 
 	unsigned Analyzer::GetMemoryRequirement(const PlaneverbConfig * config)
 	{
 		Real m_dx, m_dt;
-		unsigned samplingRate;
+		Real samplingRate;
 		CalculateGridParameters(config->gridResolution, m_dx, m_dt, samplingRate);
 		
 		vec2 m_gridSize;
@@ -133,9 +130,12 @@ namespace Planeverb
 		return size;
 	}
 
-    void Analyzer::EncodeResponse(unsigned serialIndex, vec2 gridIndex, const Cell* response, const vec3& listenerPos, unsigned n)
+    void Analyzer::EncodeResponse(unsigned serialIndex, vec2 worldSpace, const Cell* response, const vec3& listenerPos, unsigned n)
     {
         const int numSamples = (int)n;
+		const auto& globals = Context::GetGlobals();
+		Real samplingRate = globals.samplingRate;
+		Real dx = globals.gridDX;
 
         // 
         // ONSET DELAY
@@ -164,22 +164,23 @@ namespace Planeverb
         // 
         // DRY PROCESSING: OBSTRUCTION and SOURCE DIRECTION
         //
-        int directGainSamples = (int)(PV_DRY_GAIN_ANALYSIS_LENGTH * (Real)m_samplingRate);
-        int sourceDirSamples = (int)(PV_DRY_DIRECTION_ANALYSIS_LENGTH * (Real)m_samplingRate);
+        int directGainSamples = (int)(PV_DRY_GAIN_ANALYSIS_LENGTH * samplingRate);
+        int sourceDirSamples = (int)(PV_DRY_DIRECTION_ANALYSIS_LENGTH * samplingRate);
         int sourceDirEnd = onsetSample + sourceDirSamples;
         int directEnd = onsetSample + directGainSamples;
 
-        assert(sourceDirSamples <= directGainSamples && "Code below assumes source directivity is estimated on a shorter interval of time than dry gain.");
+        PV_ASSERT(sourceDirSamples <= directGainSamples && "Code below assumes source directivity is estimated on a shorter interval of time than dry gain.");
 
         Real obstructionGain = 0.0f;
         vec2 radiationDir(0,0);
         {
             Real Edry = 0;
+			const Cell* responsePtr = response;
 
             int j = 0;
             for (; j < sourceDirEnd; ++j)
             {
-                const auto& r = response[j];
+                const auto& r = *responsePtr++;
                 Edry += r.pr * r.pr;
                 radiationDir.x += r.pr * r.vx;
                 radiationDir.y += r.pr * r.vy;
@@ -187,27 +188,19 @@ namespace Planeverb
 
             for (; j < directEnd; ++j)
             {
-                const auto& r = response[j];
+                const auto& r = *responsePtr++;
                 Edry += r.pr * r.pr;
             }
 
             // Normalize dry energy by free-space energy to obtain geometry-based 
             // obstruction gain with distance attenuation factored out
-            Real EfreePr = 0.0f;
-            {
-                const int listenerX = (int)(listenerPos.x * (1.f / m_dx));
-                const int listenerY = (int)(listenerPos.z * (1.f / m_dx));
-                const int emitterX = (int)gridIndex.x;
-                const int emitterY = (int)gridIndex.y;
-
-                EfreePr = m_freeGrid->GetEFreePerR(listenerX, listenerY, emitterX, emitterY);
-            }
+            Real EfreePr = m_freeGrid->GetEFreePerR(listenerPos.x, listenerPos.z, worldSpace.x, worldSpace.y);
 
             Real E = (Edry / EfreePr);
             obstructionGain = std::sqrt(E);
 
             // Normalize and negate flux direction to obtain radiated unit vector
-            auto norm = std::sqrt(radiationDir.x*radiationDir.x + radiationDir.y*radiationDir.y);
+            Real norm = std::sqrt(radiationDir.x * radiationDir.x + radiationDir.y * radiationDir.y);
             norm = -1.0f / (norm > 0.0f ? norm : 1.0f);
             radiationDir.x = norm * radiationDir.x;
             radiationDir.y = norm * radiationDir.y;
@@ -231,7 +224,7 @@ namespace Planeverb
         //
         Real wetEnergy = 0.0f;
         {
-            const int wetGainSamples = (int)(PV_WET_GAIN_ANALYSIS_LENGTH * (Real)m_samplingRate);
+            const int wetGainSamples = (int)(PV_WET_GAIN_ANALYSIS_LENGTH * samplingRate);
             const int end = std::min(directEnd + 1 + wetGainSamples, numSamples);
             for (int j = directEnd + 1; j < end; j++)
             {
@@ -278,7 +271,7 @@ namespace Planeverb
 
             int startingPoint = directEnd + 1;
             // linear regression ignores some fixed bit of tail of energy decay curve which dips towards 0
-            int endPoint = numSamples - (int)(PV_SCHROEDER_OFFSET_S * m_samplingRate);
+            int endPoint = numSamples - (int)(PV_SCHROEDER_OFFSET_S * samplingRate);
             int regressN = endPoint - startingPoint;
             Real rn = Real(regressN);
 
@@ -319,7 +312,7 @@ namespace Planeverb
             Real numerator = xysum - ymean * xsum - xmean * ysum + rn * xmean * ymean;
             
             Real slopeDBperSample = numerator / denominator;
-            Real slopeDBperSec = slopeDBperSample * m_samplingRate;
+            Real slopeDBperSec = slopeDBperSample * samplingRate;
             m_results[serialIndex].rt60 = -60.f / slopeDBperSec;
         }
     }
@@ -336,16 +329,18 @@ namespace Planeverb
 
     vec2 Analyzer::EncodeListenerDirection(unsigned index, const Cell * response, const vec3& listenerPos, unsigned numSamples)
     {
+		const auto& globals = Context::GetGlobals();
         Real loudness = m_results[index].occlusion;
-        vec2 dim((Real)m_gridX, (Real)m_gridY);
+        vec2 dim = globals.gridSize;
         int nextIndex = index;
         const constexpr Real maxDelay = std::numeric_limits<Real>::max();
         Real delay = maxDelay;
         Real nextDelay = maxDelay;
-        Real samplingRate = (Real)m_samplingRate;
-        Real wavelength = PV_C / (Real)m_resolution;
+        Real samplingRate = globals.samplingRate;
+        Real wavelength = PV_C / (Real)globals.config.gridResolution;
         const Real threshold = (Real)0.3f;
         Real thresholdDist = threshold * wavelength;
+		Real dx = globals.gridDX;
 
         // loop while not close to the listener
         while (delay > PV_DELAY_CLOSE_THRESHOLD && loudness < PV_DISTANCE_GAIN_THRESHOLD)
@@ -391,8 +386,8 @@ namespace Planeverb
             INDEX_TO_POS(r2, c2, nextIndex, dim);
 
             // convert grid position to worldspace
-            Real ex = (Real)r2 * m_dx;
-            Real ey = (Real)c2 * m_dx;
+            Real ex = (Real)r2 * dx;
+            Real ey = (Real)c2 * dx;
 
             // find vector between and normalize
             vec2 temp(ex - listenerPos.x, ey - listenerPos.z);
@@ -411,8 +406,8 @@ namespace Planeverb
         INDEX_TO_POS(r, c, nextIndex, dim);
 
         // convert grid position to worldspace
-        Real ex = (Real)r * m_dx;
-        Real ey = (Real)c * m_dx;
+        Real ex = (Real)r * dx;
+        Real ey = (Real)c * dx;
 
         // find vector between and normalize
         vec2 output(ex - listenerPos.x, ey - listenerPos.z);

@@ -10,13 +10,13 @@ namespace Planeverb
 		FreeGrid(const PlaneverbConfig* config, char* mem);
 		~FreeGrid();
 
-		Real GetEFreePerR(int listenerIndX, int listenerIndY, int emitterIndX, int emitterIndY);
+		Real GetEFreePerR(Real listenerX, Real listenerY, Real emitterX, Real emitterY);
         Real GetEnergyAtOneMeter() const;
         static unsigned GetMemoryRequirement(const struct PlaneverbConfig* config);
 
 	private:
 		Real SimulateFreeFieldEnergy(const PlaneverbConfig* config);
-		Real CalculateEFree(const Cell* response, int responseLength, int samplingRate) const;
+		Real CalculateEFree(const Cell* response, int responseLength, Real samplingRate) const;
 
 		Grid* m_grid;
 		Real m_dx;

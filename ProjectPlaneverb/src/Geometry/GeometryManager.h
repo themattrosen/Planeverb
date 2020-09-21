@@ -45,7 +45,6 @@ namespace Planeverb
 		std::vector<GeometryChange> m_geometryChanges;	// queue of geometry changes to happen at the next sync point
 		std::mutex m_mutex;								// sync mutex
 		Grid* m_gridPtr;								// handle to the grid
-		PlaneverbGridCenteringType m_centeringType;		// grid centering type
 		vec3 m_oldListenerPosition;						// old listener position used for dynamic centering
 		using GLock = std::lock_guard<std::mutex>;		// ease of use typedef for lock_guard
 	};

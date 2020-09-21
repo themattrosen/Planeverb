@@ -7,6 +7,8 @@
 #include <PlaneverbDSP.h>
 #include <iostream>
 
+ImVec2 LISTENING_REGION = { 20.f, 20.f };
+
 int main()
 {
 	Graphics::Instance().Init();
@@ -15,7 +17,7 @@ int main()
 	config.gridResolution = Planeverb::pv_LowResolution;
 	config.gridBoundaryType = Planeverb::pv_AbsorbingBoundary;
 	config.gridCenteringType = Planeverb::pv_DynamicCentering;
-	config.gridSizeInMeters = Planeverb::vec2(10.f, 10.f);
+	config.gridSizeInMeters = Planeverb::vec2(LISTENING_REGION.x, LISTENING_REGION.y);
 	config.tempFileDirectory = ".";
 	config.gridWorldOffset = { 0, 0 };
 	config.maxThreadUsage = 1;

@@ -42,7 +42,7 @@ namespace Planeverb
 		// case invalid emitter position
 		if (!result)
 		{
-			out.occlusion = PV_INVALID_DRY_GAIN;
+			out.occlusion = 1.f;
 			return out;
 		}
 
@@ -59,44 +59,43 @@ namespace Planeverb
 
 	std::pair<const Cell*, unsigned> GetImpulseResponse(const vec3& position)
 	{
+		const auto& globals = Context::GetGlobals();
 		Grid* grid = GetContext()->GetGrid();
-		Real dx = grid->GetDX();
-		vec2 gridPosition =
+		vec2 worldPosition =
 		{
-			position.x / dx,
-			position.z / dx
+			position.x,
+			position.z
 		};
-		return std::make_pair(grid->GetResponse(gridPosition), grid->GetResponseSize());
+		return std::make_pair(grid->GetResponse(worldPosition), globals.responseSampleLength);
 	}
 
 #pragma endregion
 	
-	Cell* Grid::GetResponse(const vec2& gridPosition)
+	Cell* Grid::GetResponse(const vec2& worldSpace)
 	{
-		vec2 incDim(m_gridSize.x + 1, m_gridSize.y + 1);
-		int index = INDEX((int)gridPosition.x, (int)gridPosition.y, incDim);
+		const auto& globals = Context::GetGlobals();
+		int gridx, gridy;
+		WorldToGrid(worldSpace, gridx, gridy);
+		int index = INDEX2(gridx, gridy, (int)globals.gridSize.y + 1);
 		return m_pulseResponse[index].data();
-	}
-
-	unsigned Grid::GetResponseSize() const
-	{
-		return m_responseLength;
 	}
 	
 	// process FDTD
 	void Grid::GenerateResponseCPU(const vec3 &listener)
 	{
+		const auto& globals = Context::GetGlobals();
+
 		// determine pressure and velocity update constants
-		const Real Courant = PV_C * m_dt / m_dx;
+		const Real Courant = PV_C * globals.simulationDT / globals.gridDX;
 
 		// grid constants
-		const int gridx = (int)m_gridSize.x;
-		const int gridy = (int)m_gridSize.y;
-		const vec2 dim = m_gridSize;
+		const int gridx = (int)globals.gridSize.x;
+		const int gridy = (int)globals.gridSize.y;
+		const vec2 dim = globals.gridSize;
 		const vec2 incdim(dim.x + 1, dim.y + 1);
 		int listenerPosX;
 		int listenerPosY;
-		if (m_centering == pv_StaticCentering)
+		if (globals.config.gridCenteringType == pv_StaticCentering)
 		{
 			WorldToGrid({ listener.x, listener.z }, listenerPosX, listenerPosY);
 		}
@@ -106,15 +105,14 @@ namespace Planeverb
 			listenerPosY = gridy / 2;
 		}
 		const int listenerPos = INDEX2(listenerPosX, listenerPosY, gridy + 1);
-		m_oldListenerPos = { listener.x, listener.z };
-		const int responseLength = m_responseLength;
+		const int responseLength = globals.responseSampleLength;
 		int loopSize = (int)(incdim.x) * (int)(incdim.y);
 
 		// thread usage
-		if (m_maxThreads == 0)
+		if (globals.config.maxThreadUsage == 0)
 			omp_set_num_threads(omp_get_max_threads());
 		else
-			omp_set_num_threads(m_maxThreads);
+			omp_set_num_threads(globals.config.maxThreadUsage);
 
 		// RESET all pressure and velocity, but not B fields (can't use memset)
 		{
@@ -253,7 +251,7 @@ namespace Planeverb
 
 	void Grid::GenerateResponse(const vec3& listener)
 	{
-		if (m_executionType == PlaneverbExecutionType::pv_CPU)
+		if (Context::GetGlobals().config.threadExecutionType == PlaneverbExecutionType::pv_CPU)
 		{
 			GenerateResponseCPU(listener);
 		}

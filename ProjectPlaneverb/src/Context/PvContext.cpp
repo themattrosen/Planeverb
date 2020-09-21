@@ -12,6 +12,8 @@
 
 namespace Planeverb
 {
+	Globals Context::s_globals;
+
 	// Context singleton ptr
 	static Context* g_context = nullptr;
 
@@ -67,8 +69,8 @@ namespace Planeverb
 			Grid* grid = context->GetGrid();
 			GeometryManager* geometry = context->GetGeometryManager();
 			Analyzer* analyzer = context->GetAnalyzer();
-			const PlaneverbConfig* config = context->GetConfig();
-			vec3 listenerPos = context->GetListenerPosition();
+			Globals& globals = Context::GetGlobals();
+			globals.listenerPos = context->GetListenerPosition();;
 			
 			// run while context runs
 			while (isRunning)
@@ -77,16 +79,16 @@ namespace Planeverb
 				PROFILE_SECTION(
 				{
 					// generate impulse responses
-					PROFILE_TIME(grid->GenerateResponse(listenerPos), "Time for Generating Response");
+					PROFILE_TIME(grid->GenerateResponse(globals.listenerPos), "Time for Generating Response");
 					
 					// generate runtime data
-					PROFILE_TIME(analyzer->AnalyzeResponses(listenerPos), "Time for Analyzing Response");
+					PROFILE_TIME(analyzer->AnalyzeResponses(globals.listenerPos), "Time for Analyzing Response");
 
 					// update geometry in grid
-					geometry->PushGeometryChanges(listenerPos);
+					geometry->PushGeometryChanges(globals.listenerPos);
 
 					// update listener position and running flag
-					listenerPos = context->GetListenerPosition();
+					globals.listenerPos = context->GetListenerPosition();
 					isRunning = context->IsRunning();
 				}, 
 				"Time for one analysis iteration");
@@ -107,7 +109,7 @@ namespace Planeverb
 		}
 
 		// copy config
-		std::memcpy(&m_config, config, sizeof(PlaneverbConfig));
+		s_globals.config = *config;
 
 		// determine size for context pool, throw if operator new fails
 		unsigned systemSize = sizeof(GeometryManager) + sizeof(Grid) + sizeof(EmissionManager) + sizeof(Analyzer) + sizeof(FreeGrid);
@@ -122,6 +124,7 @@ namespace Planeverb
 		{
 			throw pv_NotEnoughMemory;
 		}
+		s_globals.impulseResponseTimeS = PV_SQRT_2 * (config->gridSizeInMeters.y / Real(2)) / PV_C + Real(0.25);
 
 		m_mem = m_systemMem + systemSize;
 		
@@ -132,7 +135,7 @@ namespace Planeverb
 		std::memset(m_systemMem, 0, size);
 
 		// placement new construct the grid
-		m_grid = new (tempSysMem) Grid(&m_config, tempPoolMem);
+		m_grid = new (tempSysMem) Grid(config, tempPoolMem);
 		tempSysMem += sizeof(Grid);
 		tempPoolMem += Grid::GetMemoryRequirement(config);
 
@@ -147,7 +150,7 @@ namespace Planeverb
 		tempPoolMem += EmissionManager::GetMemoryRequirement(config);
 
 		// placement new construct the free grid
-		m_freeGrid = new (tempSysMem) FreeGrid(&m_config, tempPoolMem);
+		m_freeGrid = new (tempSysMem) FreeGrid(config, tempPoolMem);
 		tempSysMem += sizeof(FreeGrid);
 		tempPoolMem += FreeGrid::GetMemoryRequirement(config);
 
@@ -176,5 +179,9 @@ namespace Planeverb
 		// delete pool
 		delete[] m_systemMem;
 		//delete[] m_mem; implied
+	}
+	Globals & Planeverb::Context::GetGlobals()
+	{
+		return s_globals;
 	}
 } // namespace Planeverb

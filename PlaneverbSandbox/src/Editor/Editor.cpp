@@ -496,13 +496,17 @@ void Editor::DisplayGrid(ImDrawList * list)
 	}
 }
 
+extern ImVec2 LISTENING_REGION;
 
 void Editor::DisplayAABBs(ImDrawList * drawList, const ImVec2 & offset)
 {
 	static const ImVec2 NODE_WINDOW_PADDING{ 8.f, 8.f };
 	static const ImU32 NODE_BORDER_COLOR = IM_COL32(200, 200, 100, 255);
 
-	drawList->AddRect(ImVec2(0, 0) + offset, (ImVec2(25, 25) * GRID_TO_WORLD_SCALE) + offset, NODE_BORDER_COLOR);
+	ImVec2 listener{ m_listener.x, m_listener.z };
+
+	drawList->AddRect((listener - ( LISTENING_REGION * 0.5f)) * GRID_TO_WORLD_SCALE + offset, 
+		(listener + (LISTENING_REGION * 0.5f)) * GRID_TO_WORLD_SCALE + offset, NODE_BORDER_COLOR);
 
 	for (auto& pair : m_geometry)
 	{

@@ -112,7 +112,7 @@ namespace Planeverb
 	const constexpr Real PV_LISTENER_DELTA_THRESHOLD = Real(0.2f);
 
 	// struct to represent grid cells
-	// 16 bytes
+	// 20 bytes
 	struct Cell
 	{
 		Real pr;	// air pressure
@@ -130,6 +130,18 @@ namespace Planeverb
 			by((short)_by),
 			absorption(a)
 		{}
+	};
+
+	struct Globals
+	{
+		PlaneverbConfig config;
+		Real impulseResponseTimeS;
+		Real gridDX;
+		vec2 gridSize;
+		vec3 listenerPos;
+		Real samplingRate;
+		Real simulationDT;
+		unsigned responseSampleLength;
 	};
 
 } // Planeverb
