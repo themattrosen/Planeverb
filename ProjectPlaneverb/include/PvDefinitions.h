@@ -22,7 +22,7 @@
 // helper defines
 #define INDEX(row, col, dim) ( (row) * ((unsigned)(dim).x) + (col) )
 #define INDEX2(row, col, maxy) ( (row) * (maxy) + (col) )
-#define INDEX_TO_POS(ISET, JSET, i, dim) (ISET) = (i) / (unsigned)(dim).x; (JSET) = (i) % (unsigned)(dim).x
+#define INDEX_TO_POS(ISET, JSET, i, dim) (ISET) = (i) / (int)((dim).x); (JSET) = (i) % (int)((dim).x)
 #define INDEX3(row, col, t, dim, maxT) ( (t) + (maxT) * (INDEX((row), (col), (dim))) ) 
 #define INDEX3_2(x, y, z, xmax, ymax, zmax) ((x * (ymax) * (zmax)) + (y * (zmax)) + z)
 #define PV_INLINE inline 

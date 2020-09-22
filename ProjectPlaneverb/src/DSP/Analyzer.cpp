@@ -338,9 +338,8 @@ namespace Planeverb
         Real nextDelay = maxDelay;
         Real samplingRate = globals.samplingRate;
         Real wavelength = PV_C / (Real)globals.config.gridResolution;
-        const Real threshold = (Real)0.3f;
+        const constexpr Real threshold = (Real)0.3f;
         Real thresholdDist = threshold * wavelength;
-		Real dx = globals.gridDX;
 
         // loop while not close to the listener
         while (delay > PV_DELAY_CLOSE_THRESHOLD && loudness < PV_DISTANCE_GAIN_THRESHOLD)
@@ -381,15 +380,17 @@ namespace Planeverb
             loudness = nextLoudness;
 
             // line of sight check
-            Real geodesicDist = PV_C * nextDelay / samplingRate;
+            Real geodesicDist = PV_C * (nextDelay / samplingRate);
             int r2, c2;
             INDEX_TO_POS(r2, c2, nextIndex, dim);
 
             // convert grid position to worldspace
-            Real ex = (Real)r2 * dx;
-            Real ey = (Real)c2 * dx;
+			vec2 gridWorldSpace;
+			m_grid->GridToWorld(r2, c2, gridWorldSpace);
+            Real ex = gridWorldSpace.x;
+            Real ey = gridWorldSpace.y;
 
-            // find vector between and normalize
+            // find vector between and check if within distance threshold
             vec2 temp(ex - listenerPos.x, ey - listenerPos.z);
             Real euclideanDist = (temp.x * temp.x) + (temp.y * temp.y);;
             euclideanDist = std::sqrt(euclideanDist);
@@ -406,8 +407,10 @@ namespace Planeverb
         INDEX_TO_POS(r, c, nextIndex, dim);
 
         // convert grid position to worldspace
-        Real ex = (Real)r * dx;
-        Real ey = (Real)c * dx;
+		vec2 gridWorldSpace;
+		m_grid->GridToWorld(r, c, gridWorldSpace);
+		Real ex = gridWorldSpace.x;
+		Real ey = gridWorldSpace.y;
 
         // find vector between and normalize
         vec2 output(ex - listenerPos.x, ey - listenerPos.z);

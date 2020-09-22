@@ -146,20 +146,14 @@ namespace Planeverb
 		// is added back in with the new listener position
 		if (globals.config.gridCenteringType == pv_DynamicCentering)
 		{
-			Real listenerDeltaX = std::abs(listenerPos.x - m_oldListenerPosition.x);
-			Real listenerDeltaZ = std::abs(listenerPos.z - m_oldListenerPosition.z);
-			if (listenerDeltaX >= PV_LISTENER_DELTA_THRESHOLD || listenerDeltaZ >= PV_LISTENER_DELTA_THRESHOLD)
+			const AABB* transformArray = m_geometry.data();
+			const size_t size = m_geometry.size();
+			for (size_t i = 0; i < size; ++i)
 			{
-				const AABB* transformArray = m_geometry.data();
-				const size_t size = m_geometry.size();
-				for (size_t i = 0; i < size; ++i)
-				{
-					m_geometryChanges.push_back({ ct_Add, *transformArray++ });
-				}
-
-				m_gridPtr->ClearAABBs();
-				m_oldListenerPosition = listenerPos;
+				m_geometryChanges.push_back({ ct_Add, *transformArray++ });
 			}
+
+			m_gridPtr->ClearAABBs();
 		}
 
 		size_t size = m_geometryChanges.size();
