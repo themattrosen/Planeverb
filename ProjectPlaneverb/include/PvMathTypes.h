@@ -1,4 +1,5 @@
 #pragma once
+#include <cmath>
 
 // Enable different bit-depth for floating point numbers
 #define Real float
@@ -13,6 +14,14 @@ namespace Planeverb
 		vec3& operator=(const vec3&) = default;
 		vec3(const vec3& rhs) = default;
 		~vec3() = default;
+		vec3 operator-(const vec3& rhs) { return vec3(x - rhs.x, y - rhs.y, z - rhs.z); }
+		vec3 operator+(const vec3& rhs) { return vec3(x + rhs.x, y + rhs.y, z + rhs.z); }
+		vec3 operator*(Real scalar) { return vec3(x * scalar, y * scalar, z * scalar); }
+
+		inline Real SquareLength() const { return x * x + y * y + z * z; }
+		inline Real Length() const { return std::sqrt(SquareLength()); }
+		inline Real SquareDistance(const vec3& rhs) { return vec3(*this - rhs).SquareLength(); }
+		inline Real Distance(const vec3& rhs) { return std::sqrt(SquareDistance(rhs)); }
 	};
 
 	struct vec2
@@ -26,6 +35,16 @@ namespace Planeverb
 		vec2& operator=(const vec2&) = default;
 		vec2(const vec2& rhs) = default;
 		~vec2() = default;
+		vec2 operator-(const vec2& rhs) const { return vec2(x - rhs.x, y - rhs.y); }
+		vec2 operator+(const vec2& rhs) const { return vec2(x + rhs.x, y + rhs.y); }
+		vec2 operator*(Real scalar) const { return vec2(x * scalar, y * scalar); }
+
+		inline Real SquareLength() const { return x * x + y * y; }
+		inline Real Length() const { return std::sqrt(SquareLength()); }
+		inline Real SquareDistance(const vec2& rhs) const { return vec2(*this - rhs).SquareLength(); }
+		inline Real Distance(const vec2& rhs) const { return std::sqrt(SquareDistance(rhs)); }
+		inline void Normalize() { Real len(Length()); if (len > 0) { x /= len; y /= len; } }
+		inline vec2 Normalized() const { vec2 ret(*this); ret.Normalize(); return ret; }
 	};
 
 	struct AABB

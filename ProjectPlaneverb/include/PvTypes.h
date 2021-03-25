@@ -10,12 +10,6 @@ namespace Planeverb
 		pv_InvalidConfig,	// user passed Planeverb::Init() a config ptr with invalid data or an invalid config ptr
 	};
 
-	enum PlaneverbExecutionType
-	{
-		pv_CPU, // use CPU OpenMP threading
-		//pv_GPU, // use GPU OpenCL threading - !!! Not supported !!!
-	};
-
 	// Resolution represents max representable frequency in the grid
 	// Affects grid processing speed by changing the size per grid cell
 	// Low or mid resolution should be used for 4 or less cores.
@@ -44,7 +38,7 @@ namespace Planeverb
 	struct PlaneverbConfig
 	{
 		// grid size in meters
-		vec2 gridSizeInMeters = {10.f, 10.f};
+		vec2 gridSizeInMeters = {20.f, 20.f};
 
 		// max frequency represented by the FDTD grid
 		// simplified into different resolution bins
@@ -57,12 +51,9 @@ namespace Planeverb
 		// must be set manually by user
 		const char* tempFileDirectory;
 
-		// thread usage
-		unsigned maxThreadUsage = 0; // can specify number of threads, 0 means as many as possible, minimum 2 otherwise
-		PlaneverbExecutionType threadExecutionType = pv_CPU; // CPU or GPU
-
 		// grid centering
-		PlaneverbGridCenteringType gridCenteringType;	// can either stay statically centered, or center itself on the listener
+		PlaneverbGridCenteringType gridCenteringType	// can either stay statically centered, or center itself on the listener
+			= pv_DynamicCentering;
 		vec2 gridWorldOffset = { 0.f, 0.f };			// offset from the center in meters. 
 														// for static centering, offset is off from the origin
 														// for dynamic centering, offset is off of the listener position
@@ -95,7 +86,7 @@ namespace Planeverb
 	const constexpr Real PV_Z_AIR = PV_RHO * PV_C;						// natural impedance of air
 	const constexpr Real PV_INV_Z_AIR = (Real)1.f / PV_Z_AIR;			// inverse impedance for absorbing boundaries
 	const constexpr Real PV_INV_Z_REFLECT = (Real)0.0f;					// inverse impedance for reflecting boundaries
-	const constexpr Real PV_AUDIBLE_THRESHOLD_GAIN = (Real)0.00000316f;	// precalculated -110 dB converted to linear gain
+	const constexpr Real PV_AUDIBLE_THRESHOLD_GAIN = (Real)0.0001f; //(Real)0.00000316f;	// precalculated -110 dB converted to linear gain
     const constexpr Real PV_DRY_DIRECTION_ANALYSIS_LENGTH = (Real)0.005f;// length of time flux of first wavefront (source direction)
     const constexpr Real PV_DRY_GAIN_ANALYSIS_LENGTH = (Real)0.01f;		// length of time to process the initial pulse for occlusion
 	const constexpr Real PV_WET_GAIN_ANALYSIS_LENGTH = (Real)0.080f;	// length of time to process early reflections
@@ -118,7 +109,7 @@ namespace Planeverb
 		Real vx;	// x component of particle velocity
 		Real vy;	// y component of particle velocity
 		short b;	// B field packed into 2 2 byte fields
-		short by;	// B field packed into 2 2 byte fields
+		short bx;	// B field packed into 2 2 byte fields
 		Real absorption; // absorption coefficient
 
 		Cell(Real _pr = 0.f, Real _vx = 0.f, Real _vy = 0.f, int boundaryCoef = 1, int _by = 1, Real a = PV_ABSORPTION_FREE_SPACE) :
@@ -126,7 +117,7 @@ namespace Planeverb
 			vx(_vx),
 			vy(_vy),
 			b((short)boundaryCoef),
-			by((short)_by),
+			bx((short)_by),
 			absorption(a)
 		{}
 	};

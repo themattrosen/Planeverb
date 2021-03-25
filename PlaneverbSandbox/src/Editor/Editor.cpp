@@ -320,8 +320,7 @@ void Editor::ShowAudioWindow()
 
 				AudioCore::Instance().SetAudioData(&m_audioData);
 
-				namespace fs = std::experimental::filesystem;
-				fs::path p(m_currentFile);
+				std::filesystem::path p(m_currentFile);
 				m_currentFile = p.filename().string();
 			}
 		}
@@ -414,7 +413,7 @@ void Editor::ShowAnalyzerWindow()
 		{
 			ImGui::Text("Dry Gain (dB) : ");
             ImGui::Text("Wet Gain (dB) : ");
-            //ImGui::Text("Lowpass   : ");
+            ImGui::Text("Lowpass       : ");
 			ImGui::Text("RT60 (s)      : ");
 			ImGui::Text("Listener Dir  : ");
 			ImGui::Text("Source Dir    : ");
@@ -423,7 +422,7 @@ void Editor::ShowAnalyzerWindow()
 		{
             ImGui::Text("Dry Gain (dB) : %.1f", 10.0f * std::log10(result.occlusion * result.occlusion));
             ImGui::Text("Wet Gain (dB) : %.1f", 10.0f * std::log10(result.wetGain * result.wetGain));
-			//ImGui::Text("Lowpass   : %f", result.lowpass);
+			ImGui::Text("Lowpass       : %f", result.lowpass);
 			ImGui::Text("RT60 (s)      : %.2f", result.rt60);
 			ImGui::Text("Listener Dir  : (%.3f, %.3f)", result.direction.x, result.direction.y);
 			ImGui::Text("Source Dir    : (%.3f, %.3f)", result.sourceDirectivity.x, result.sourceDirectivity.y);
@@ -455,23 +454,25 @@ void Editor::ShowIRWindow()
 	{
         ImGui::SetWindowFontScale(2.0f);
 		std::pair<const Planeverb::Cell*, unsigned> IR = Planeverb::GetImpulseResponse(m_emitter);
-		std::memcpy(&m_impulseResponseCopy.front(), IR.first, sizeof(Planeverb::Cell) * m_impulseResponseLength);
-
-		if (IR.second != m_impulseResponseLength)
+		if (IR.first)
 		{
-			ImGui::Text("Something went wrong with the IR length");
-			ImGui::End();
-			return;
+			if (IR.second != m_impulseResponseLength)
+			{
+				ImGui::Text("Something went wrong with the IR length");
+				ImGui::End();
+				return;
+			}
+
+			std::memcpy(&m_impulseResponseCopy.front(), IR.first, sizeof(Planeverb::Cell) * m_impulseResponseLength);
+
+			ImGui::PlotLines("Impulse Response", IRGetter, &m_impulseResponseCopy.front(), m_impulseResponseLength,
+				0, "", -0.5f, 0.5f, ImVec2(ImGui::GetWindowWidth(), 150));
+
+			ImGui::Separator();
+
+			ImGui::PlotLines("Impulse Response (DB)", IRDBGetter, &m_impulseResponseCopy.front(), m_impulseResponseLength,
+				0, "", -96, 0.f, ImVec2(ImGui::GetWindowWidth(), 150));
 		}
-
-		ImGui::PlotLines("Impulse Response", IRGetter, &m_impulseResponseCopy.front(), m_impulseResponseLength,
-			0, "", -0.5f, 0.5f, ImVec2(ImGui::GetWindowWidth(), 150));
-
-		ImGui::Separator();
-
-		ImGui::PlotLines("Impulse Response (DB)", IRDBGetter, &m_impulseResponseCopy.front(), m_impulseResponseLength,
-			0, "", -96, 0.f, ImVec2(ImGui::GetWindowWidth(), 150));
-
 		ImGui::End();
 	}
 }

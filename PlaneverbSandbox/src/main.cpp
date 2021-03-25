@@ -20,7 +20,6 @@ int main()
 	config.gridSizeInMeters = Planeverb::vec2(LISTENING_REGION.x, LISTENING_REGION.y);
 	config.tempFileDirectory = ".";
 	config.gridWorldOffset = { 0, 0 };
-	config.maxThreadUsage = 1;
 	
 	Planeverb::Init(&config);
 	

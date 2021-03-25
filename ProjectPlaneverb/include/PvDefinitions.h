@@ -32,7 +32,7 @@
 // Redefine these to true to enable debug print information to stdout
 #define PRINT_PROFILE false
 #define PRINT_PROFILE_SECTION false
-#define PRINT_GRID true
+#define PRINT_GRID false
 
 #if PRINT_PROFILE
 #define PROFILE_TIME(line, tag)	\

@@ -10,7 +10,7 @@ namespace Planeverb
 		FreeGrid(const PlaneverbConfig* config, char* mem);
 		~FreeGrid();
 
-		Real GetEFreePerR(Real listenerX, Real listenerY, Real emitterX, Real emitterY);
+		Real GetEFreePerR(const vec2& listenerPos, vec2& emitterPos);
         Real GetEnergyAtOneMeter() const;
         static unsigned GetMemoryRequirement(const struct PlaneverbConfig* config);
 

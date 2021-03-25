@@ -102,14 +102,14 @@ namespace Planeverb
 		// throw if input is invalid
 		if (config == nullptr || config->gridResolution < pv_LowResolution ||
 			config->gridSizeInMeters.x == 0 || config->gridSizeInMeters.y == 0 ||
-			config->tempFileDirectory == nullptr || 
-			config->maxThreadUsage < 0)
+			config->tempFileDirectory == nullptr)
 		{
 			throw pv_InvalidConfig;
 		}
 
 		// copy config
 		s_globals.config = *config;
+		s_globals.impulseResponseTimeS = PV_SQRT_2 * (config->gridSizeInMeters.y / Real(2)) / PV_C + Real(0.25);
 
 		// determine size for context pool, throw if operator new fails
 		unsigned systemSize = sizeof(GeometryManager) + sizeof(Grid) + sizeof(EmissionManager) + sizeof(Analyzer) + sizeof(FreeGrid);
@@ -124,7 +124,6 @@ namespace Planeverb
 		{
 			throw pv_NotEnoughMemory;
 		}
-		s_globals.impulseResponseTimeS = PV_SQRT_2 * (config->gridSizeInMeters.y / Real(2)) / PV_C + Real(0.25);
 
 		m_mem = m_systemMem + systemSize;
 		
@@ -171,10 +170,10 @@ namespace Planeverb
 
 		// call dtor on all systems in reverse order
 		m_analyzer->~Analyzer();
+		m_freeGrid->~FreeGrid();
 		m_emissions->~EmissionManager();
 		m_geometry->~GeometryManager();
 		m_grid->~Grid();
-		m_freeGrid->~FreeGrid();
 
 		// delete pool
 		delete[] m_systemMem;

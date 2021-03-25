@@ -31,6 +31,9 @@ namespace Planeverb
 	// Retrieve acoustic output for a given emitter
 	PV_API PlaneverbOutput GetOutput(EmissionID emitter);
 
+	// Checks if the output returned from GetOutput is a valid output.
+	PV_API bool IsOutputValid(const PlaneverbOutput* output);
+
 	// Add a new piece of geometry to the scene
 	PV_API PlaneObjectID AddGeometry(const AABB* transform);
 

@@ -1,5 +1,6 @@
 #pragma once
 #include "PvTypes.h"
+#include <Util/Array.h>
 #include <vector>
 #include <mutex>
 
@@ -36,7 +37,7 @@ namespace Planeverb
 		// but each access to it was probably a cache miss because of the length
 		// of each response anyway, so 
 		// it has been converted to being a 2D array of std::vectors
-		std::vector<Cell>* m_pulseResponse;
+		Planeverb::Array<Cell>* m_pulseResponse;
 
 		Real* m_pulse;								// precomputed Gaussian pulse
 	};

@@ -1,6 +1,7 @@
 #include <FDTD\FreeGrid.h>
 #include <Context\PvContext.h>
 #include <PvDefinitions.h>
+#include <cmath>
 
 namespace Planeverb
 { 
@@ -42,13 +43,12 @@ namespace Planeverb
 		// grid should be deleted already
 	}
 
-	Real FreeGrid::GetEFreePerR(Real lX, Real lY, Real eX, Real eY)
+	Real FreeGrid::GetEFreePerR(const vec2& listenerPos, vec2& emitterPos)
 	{
 		// find Euclidean distance between listener and emitter
 		Real efree = m_EFree;
 
-		Real r = std::sqrt((eX - lX) * (eX - lX) +
-			(eY - lY) * (eY - lY));
+		Real r = listenerPos.Distance(emitterPos);
 		if (r == 0.f)
 		{
 			return efree;

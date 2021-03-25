@@ -4,7 +4,6 @@
 #include <Context\PvContext.h>
 #include <PvDefinitions.h>
 
-#include <omp.h>
 #include <cmath>
 #include <iostream>
 #include <utility>
@@ -46,12 +45,6 @@ namespace Planeverb
 		const auto& globals = Context::GetGlobals();
 		vec2 dim = globals.gridSize;
 
-		// set OMP thread count
-		if (globals.config.maxThreadUsage == 0)
-			omp_set_num_threads(omp_get_max_threads());
-		else
-			omp_set_num_threads(globals.config.maxThreadUsage);
-
         int gridSize = (int)dim.x * (int)dim.y;
 		int responseLength = globals.responseSampleLength;
 
@@ -63,33 +56,26 @@ namespace Planeverb
 		for (int i = 0; i < gridSize; ++i)
 			*delayLooper++ = maxVal;
 
-		// each type of analysis can be done in parallel
-		// each index can be done in parallel
-		
-//#pragma omp parallel for
 		for (int serialIndex = 0; serialIndex < gridSize; ++serialIndex)
 		{
 			// convert index to grid position, to retrieve IR
 			vec2 worldSpace;
-			unsigned gridX, gridY;
-			INDEX_TO_POS(gridX, gridY, serialIndex, dim);
-			m_grid->GridToWorld(gridX, gridY, worldSpace);
+			int col, row;
+			INDEX_TO_POS(row, col, serialIndex, dim);
+			m_grid->GridToWorld(col, row, worldSpace);
 			const Cell* response = m_grid->GetResponse(worldSpace);
 
             EncodeResponse(serialIndex, worldSpace, response, listenerPos, responseLength);
 		}
 
 		// run a post processing step to find directions based off of delays
-		// can be run in parallel for each grid position
-		
-//#pragma omp parallel for
 		for (int i = 0; i < gridSize; ++i)
 		{
 			// retrieve IR
 			vec2 worldSpace;
-			unsigned gridX, gridY;
-			INDEX_TO_POS(gridX, gridY, i, dim);
-			m_grid->GridToWorld(gridX, gridY, worldSpace);
+			unsigned col, row;
+			INDEX_TO_POS(row, col, i, dim);
+			m_grid->GridToWorld(col, row, worldSpace);
 			const Cell* response = m_grid->GetResponse(worldSpace);
 
 			// analyze for listener direction
@@ -103,9 +89,9 @@ namespace Planeverb
 		const auto& globals = Context::GetGlobals();
 		int posX, posY;
 		m_grid->WorldToGrid({ emitterPos.x, emitterPos.z }, posX, posY);
-		if (posX > globals.gridSize.x || posY > globals.gridSize.y)
+		if (posX > globals.gridSize.x || posY > globals.gridSize.y || posX < 0 || posY < 0)
 			return nullptr;
-		const auto* res = &(m_results[INDEX(posX, posY, globals.gridSize)]);
+		const auto* res = &(m_results[INDEX(posY, posX, globals.gridSize)]);
 		return res;
 	}
 
@@ -194,16 +180,16 @@ namespace Planeverb
 
             // Normalize dry energy by free-space energy to obtain geometry-based 
             // obstruction gain with distance attenuation factored out
-            Real EfreePr = m_freeGrid->GetEFreePerR(listenerPos.x, listenerPos.z, worldSpace.x, worldSpace.y);
+            Real EfreePr = m_freeGrid->GetEFreePerR(vec2(listenerPos.x, listenerPos.z), worldSpace);
 
             Real E = (Edry / EfreePr);
             obstructionGain = std::sqrt(E);
 
             // Normalize and negate flux direction to obtain radiated unit vector
-            Real norm = std::sqrt(radiationDir.x * radiationDir.x + radiationDir.y * radiationDir.y);
-            norm = -1.0f / (norm > 0.0f ? norm : 1.0f);
-            radiationDir.x = norm * radiationDir.x;
-            radiationDir.y = norm * radiationDir.y;
+            Real norm = radiationDir.Length();
+            norm = Real(-1.0f) / (norm > Real(0.0f) ? norm : Real(1.0f));
+            radiationDir.x *= norm;
+            radiationDir.y *= norm;
         }
         
         m_results[serialIndex].occlusion = obstructionGain;
@@ -215,9 +201,12 @@ namespace Planeverb
 
         // get input distance driven by inverse of occlusion. If occlusion is very small, cap out at "lots of occlusion"
         Real r = 1.0f / std::max(0.001f, obstructionGain);
+        
         // Find LPF cutoff frequency by feeding into equation: y = -147 + (18390) / (1 + (x / 12)^0.8 )
-        m_results[serialIndex].lowpassIntensity = 
-            (Real)-147.f + ((Real)18390.f) / ((Real)1.f + std::pow(r / (Real)12.f, (Real)0.8f));
+        const Real powNumer = r / Real(12.f);
+        const Real denom = Real(1.f) + std::pow(powNumer, Real(0.8f));
+        const Real fraction = (Real(18390.f)) / (denom);
+        m_results[serialIndex].lowpassIntensity = Real(-147.f) + fraction;
 
         //
         // Wet gain
@@ -337,8 +326,8 @@ namespace Planeverb
         Real delay = maxDelay;
         Real nextDelay = maxDelay;
         Real samplingRate = globals.samplingRate;
-        Real wavelength = PV_C / (Real)globals.config.gridResolution;
-        const constexpr Real threshold = (Real)0.3f;
+        Real wavelength = PV_C / Real(globals.config.gridResolution);
+        const constexpr Real threshold = Real(0.3f);
         Real thresholdDist = threshold * wavelength;
 
         // loop while not close to the listener
@@ -360,6 +349,8 @@ namespace Planeverb
                 int newPosIndex = INDEX(nr, nc, dim);
                 auto& result = m_results[newPosIndex];
                 Real delay = m_delaySamples[newPosIndex];
+
+                // check if sound reaches this index at all
                 if ((unsigned)delay == numSamples || result.occlusion == 0.f)
                     continue;
                 else if (delay < nextDelay && result.occlusion > 0.f)
@@ -385,15 +376,11 @@ namespace Planeverb
             INDEX_TO_POS(r2, c2, nextIndex, dim);
 
             // convert grid position to worldspace
-			vec2 gridWorldSpace;
-			m_grid->GridToWorld(r2, c2, gridWorldSpace);
-            Real ex = gridWorldSpace.x;
-            Real ey = gridWorldSpace.y;
+			vec2 emitterWorldSpace;
+			m_grid->GridToWorld(c2, r2, emitterWorldSpace);
 
             // find vector between and check if within distance threshold
-            vec2 temp(ex - listenerPos.x, ey - listenerPos.z);
-            Real euclideanDist = (temp.x * temp.x) + (temp.y * temp.y);;
-            euclideanDist = std::sqrt(euclideanDist);
+            Real euclideanDist = emitterWorldSpace.Distance(vec2(listenerPos.x, listenerPos.z));
             Real distCheck = std::abs(geodesicDist - euclideanDist);
             bool isInLineOfSight = distCheck < thresholdDist;
             if (isInLineOfSight)
@@ -407,20 +394,12 @@ namespace Planeverb
         INDEX_TO_POS(r, c, nextIndex, dim);
 
         // convert grid position to worldspace
-		vec2 gridWorldSpace;
-		m_grid->GridToWorld(r, c, gridWorldSpace);
-		Real ex = gridWorldSpace.x;
-		Real ey = gridWorldSpace.y;
+		vec2 emitterWorldSpace;
+		m_grid->GridToWorld(c, r, emitterWorldSpace);
 
         // find vector between and normalize
-        vec2 output(ex - listenerPos.x, ey - listenerPos.z);
-        Real length = (output.x * output.x) + (output.y * output.y);
-        if (length != 0.f)
-        {
-            length = std::sqrt(length);
-            output.x /= length;
-            output.y /= length;
-        }
+        vec2 output(emitterWorldSpace - vec2(listenerPos.x, listenerPos.z));
+        output.Normalize();
 
         return output;
     }

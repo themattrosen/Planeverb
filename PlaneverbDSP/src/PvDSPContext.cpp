@@ -342,7 +342,7 @@ namespace PlaneverbDSP
 		// copy input into internal storage -> Sum to mono
 		float* inputStoragePtr = m_inputStorage;
 		const float* inputPtr = in;
-		for (int i = 0; i < numFrames; ++i)
+		for (unsigned i = 0; i < numFrames; ++i)
 		{
 			float left = *inputPtr++;
 			float right = *inputPtr++;
@@ -395,7 +395,7 @@ namespace PlaneverbDSP
 		// apply spatialization
 		float* dryPtr = m_dryOutput;
 		inputStoragePtr = m_inputStorage;
-		for (int i = 0; i < numFrames; ++i)
+		for (unsigned i = 0; i < numFrames; ++i)
 		{
 			*dryPtr++ += *inputStoragePtr * currentleft;
 			*dryPtr++ += *inputStoragePtr * currentright;

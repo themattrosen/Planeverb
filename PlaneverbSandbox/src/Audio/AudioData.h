@@ -14,7 +14,7 @@ struct AudioData
 	unsigned numSamples;
 	float * data;
 	short bitsPerSample;
-	short numChannels;
+	short numChannels = 2;
 	unsigned numFrames;
 
 	AudioData() : samplingRate(0.f), sizeInBytes(0), numSamples(0), data(nullptr), bitsPerSample(0) {}

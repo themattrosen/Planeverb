@@ -27,5 +27,6 @@
     <ClInclude Include="src\Geometry\GeometryManager.h" />
     <ClInclude Include="include\PvMathTypes.h" />
     <ClInclude Include="src\Util\ScopedTimer.h" />
+    <ClInclude Include="src\Util\Array.h" />
   </ItemGroup>
 </Project>
