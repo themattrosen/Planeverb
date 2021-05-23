@@ -20,12 +20,10 @@ namespace Planeverb
 		pv_DefaultBoundary = pv_AbsorbingBoundary
 	}
 
-	public enum ThreadExecutionType
+	public enum GridCenteringType
 	{
-		pv_CPU = 0,
-		pv_GPU = 1, // !!! Not supported !!!
-
-		pv_DefaultThreadExecution = pv_CPU
+		pv_StaticCentering,
+		pv_DynamicCentering
 	}
 
 	[System.Serializable]
@@ -43,11 +41,11 @@ namespace Planeverb
 		[Tooltip("Directory to store cached output files to. Must be a valid directory.")]
 		public string tempFileDirectory;
 
-		[Tooltip("Number of threads that Planeverb is allowed to use. Set to 0 to use as many as available.")]
-		public int maxThreadUsage;
+		[Tooltip("The acoustic grid can either center itself statically at a point, or follow the listener dynamically.")]
+		public GridCenteringType gridCenteringType;
 
-		[Tooltip("Determines whether Planeverb will execute on the CPU or on the GPU. Currently only the CPU implementation is supported.")]
-		public ThreadExecutionType threadExecutionType;
+		[Tooltip("Offset from the 'center' in meters. For static centering, offset is from the origin, for dynamic centering, offset is off of the listener position.")]
+		public Vector2 gridWorldOffset;
 	}
 
 } // namespace Planeverb

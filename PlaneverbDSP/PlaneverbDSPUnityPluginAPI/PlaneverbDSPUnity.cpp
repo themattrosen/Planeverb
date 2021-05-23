@@ -40,7 +40,8 @@ extern "C"
 #pragma region Export Functions
 	PVU_EXPORT void PVU_CC
 	PlaneverbDSPInit(int maxCallbackLength, int samplingRate,
-		int dspSmoothingFactor, bool useSpatialization, float wetGainRatio)
+		int dspSmoothingFactor, bool useSpatialization, 
+		float wetGainRatio, int maxEmitters)
 	{
 		PlaneverbDSP::PlaneverbDSPConfig config;
 		config.maxCallbackLength = maxCallbackLength;
@@ -48,6 +49,7 @@ extern "C"
 		config.dspSmoothingFactor = dspSmoothingFactor;
 		config.useSpatialization = useSpatialization;
 		config.wetGainRatio = wetGainRatio;
+		config.maxEmitters = (unsigned)maxEmitters;
 
 		PlaneverbDSP::Init(&config);
 	}
@@ -60,18 +62,45 @@ extern "C"
 
 	PVU_EXPORT void PVU_CC
 	PlaneverbDSPSetListenerTransform(float posX, float posY, float posZ,
-		float forwardX, float forwardY, float forwardZ)
+		float forwardX, float forwardY, float forwardZ,
+		float upX, float upY, float upZ
+	)
 	{
 		PlaneverbDSP::SetListenerTransform(posX, posY, posZ, 
-			forwardX, forwardY, forwardZ);
+			forwardX, forwardY, forwardZ, 
+			upX, upY, upZ
+		);
+	}
+
+	PVU_EXPORT int PVU_CC
+	PlaneverbDSPAddEmitter(float posX, float posY, float posZ,
+		float forwardX, float forwardY, float forwardZ,
+		float upX, float upY, float upZ
+	)
+	{
+		return (int)PlaneverbDSP::AddEmitter(posX, posY, posZ,
+			forwardX, forwardY, forwardZ,
+			upX, upY, upZ
+		);
+	}
+	
+	PVU_EXPORT void PVU_CC
+	PlaneverbDSPUpdateEmitter(int emissionID, float posX, float posY, float posZ,
+		float forwardX, float forwardY, float forwardZ,
+		float upX, float upY, float upZ
+	)
+	{
+		PlaneverbDSP::UpdateEmitter((PlaneverbDSP::EmissionID)emissionID, 
+			posX, posY, posZ,
+			forwardX, forwardY, forwardZ,
+			upX, upY, upZ
+		);
 	}
 
 	PVU_EXPORT void PVU_CC
-	PlaneverbDSPUpdateEmitter(int emissionID, float posX, float posY, float posZ,
-		float forwardX, float forwardY, float forwardZ)
+	PlaneverbDSPRemoveEmitter(int emissionID)
 	{
-		PlaneverbDSP::UpdateEmitter((PlaneverbDSP::EmissionID)emissionID, posX, posY, posZ,
-			forwardX, forwardY, forwardZ);
+		PlaneverbDSP::RemoveEmitter((PlaneverbDSP::EmissionID)emissionID);
 	}
 
 	PVU_EXPORT void PVU_CC

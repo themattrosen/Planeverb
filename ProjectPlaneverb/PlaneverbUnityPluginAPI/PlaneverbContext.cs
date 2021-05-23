@@ -24,20 +24,22 @@ namespace Planeverb
 
 		[DllImport(DLLNAME)]
 		private static extern void PlaneverbInit(float gridSizeX, float gridSizeY,
-		int gridResolution, int gridBoundaryType, string tempFileDir,
-		int maxThreadUsage, int threadExecutionType);
+			int gridResolution, int gridBoundaryType, string tempFileDir,
+			int gridCenteringType,
+			float gridWorldOffsetX, float gridWorldOffsetY
+		);
 
 		[DllImport(DLLNAME)]
 		private static extern void PlaneverbExit();
 
 		[DllImport(DLLNAME)]
-		private static extern int PlaneverbEmit(float x, float y, float z);
+		private static extern int PlaneverbAddEmitter(float x, float y, float z);
 
 		[DllImport(DLLNAME)]
-		private static extern void PlaneverbUpdateEmission(int id, float x, float y, float z);
+		private static extern void PlaneverbUpdateEmitter(int id, float x, float y, float z);
 
 		[DllImport(DLLNAME)]
-		private static extern void PlaneverbEndEmission(int id);
+		private static extern void PlaneverbRemoveEmitter(int id);
 
 		[DllImport(DLLNAME)]
 		private static extern PlaneverbOutput PlaneverbGetOutput(int emissionID);
@@ -70,7 +72,9 @@ namespace Planeverb
 			PlaneverbInit(config.gridSizeInMeters.x, config.gridSizeInMeters.y,
 				(int)config.gridResolution, (int)config.gridBoundaryType,
 				config.tempFileDirectory,
-				config.maxThreadUsage, (int)config.threadExecutionType);
+				(int)config.gridCenteringType, 
+				config.gridWorldOffset.x, config.gridWorldOffset.y
+			);
 
 			Debug.AssertFormat(contextInstance == null, "More than one instance of the PlaneverbContext created! Singleton violated.");
 			contextInstance = this;
@@ -88,19 +92,19 @@ namespace Planeverb
 			return contextInstance;
 		}
 
-		public static int Emit(Vector3 pos)
+		public static int AddEmitter(Vector3 pos)
 		{
-			return PlaneverbEmit(pos.x, pos.y, pos.z);
+			return PlaneverbAddEmitter(pos.x, pos.y, pos.z);
 		}
 
-		public static void UpdateEmission(int id, Vector3 pos)
+		public static void UpdateEmitter(int id, Vector3 pos)
 		{
-			PlaneverbUpdateEmission(id, pos.x, pos.y, pos.z);
+			PlaneverbUpdateEmitter(id, pos.x, pos.y, pos.z);
 		}
 
-		public static void EndEmission(int id)
+		public static void RemoveEmitter(int id)
 		{
-			PlaneverbEndEmission(id);
+			PlaneverbRemoveEmitter(id);
 		}
 
 		public static int AddGeometry(AABB aabb)

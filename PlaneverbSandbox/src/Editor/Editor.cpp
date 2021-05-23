@@ -37,8 +37,9 @@ void Editor::Init(GLFWwindow * window)
 	m_emitter = Planeverb::vec3(5.f, 0.f, 6.f);
 	Planeverb::SetListenerPosition(m_listener);
 	PlaneverbDSP::SetListenerTransform(m_listener.x, m_listener.y, m_listener.z,
-		0, 0, 1);
-	PlaneverbDSP::UpdateEmitter(m_emitterID, m_emitter.x, m_emitter.y, m_emitter.z, 1, 0, 0);
+		0, 0, 1, 
+		0, 1, 0);
+	PlaneverbDSP::UpdateEmitter(m_emitterID, m_emitter.x, m_emitter.y, m_emitter.z, 1, 0, 0, 0, 1, 0);
 	PlaneverbDSP::SetEmitterDirectivityPattern(m_emitterID, PlaneverbDSP::pvd_Cardioid);
 	using namespace std::chrono_literals;
 	std::this_thread::sleep_for(100ms);
@@ -612,7 +613,8 @@ void Editor::DisplayEmitterAndListener(ImDrawList * drawList, const ImVec2 & off
 		m_listener.z += delta.y / GRID_TO_WORLD_SCALE;
 		Planeverb::SetListenerPosition(m_listener);
 		PlaneverbDSP::SetListenerTransform(m_listener.x, m_listener.y, m_listener.z,
-			0, 0, 1);
+			0, 0, 1, 
+			0, 1, 0);
 	}
 
 	ImGui::SetCursorScreenPos(emitterRectMin + ImVec2{ 0, -10 });
@@ -641,8 +643,8 @@ void Editor::DisplayEmitterAndListener(ImDrawList * drawList, const ImVec2 & off
 		ImGui::ResetMouseDragDelta();
 		m_emitter.x += delta.x / GRID_TO_WORLD_SCALE;
 		m_emitter.z += delta.y / GRID_TO_WORLD_SCALE;
-		Planeverb::UpdateEmission(m_emitterID, m_emitter);
-		PlaneverbDSP::UpdateEmitter(m_emitterID, m_emitter.x, m_emitter.y, m_emitter.z, 1, 0, 0);
+		Planeverb::UpdateEmitter(m_emitterID, m_emitter);
+		PlaneverbDSP::UpdateEmitter(m_emitterID, m_emitter.x, m_emitter.y, m_emitter.z, 1, 0, 0, 0, 1, 0);
 		PlaneverbDSP::SetEmitterDirectivityPattern(m_emitterID, PlaneverbDSP::pvd_Cardioid);
 	}
 

@@ -12,16 +12,32 @@ namespace PlaneverbDSP
 	// Shuts down the Planeverb DSP module
 	PV_DSP_API void Exit();
 
-	PV_DSP_API void UpdateEmitter(EmissionID id, float posX, float posY, float posZ,
-		float forwardX, float forwardY, float forwardZ);
+	// Add an emitter to the DSP scene
+	PV_DSP_API EmissionID AddEmitter(float posX, float posY, float posZ,
+		float forwardX, float forwardY, float forwardZ,
+		float upX, float upY, float upZ);
 
+	// Update an existing emitter in the DSP scene
+	PV_DSP_API void UpdateEmitter(EmissionID id, float posX, float posY, float posZ,
+		float forwardX, float forwardY, float forwardZ,
+		float upX, float upY, float upZ);
+
+	// Remove an emitter from the DSP scene
+	PV_DSP_API void RemoveEmitter(EmissionID id);
+
+	// Set the directivity pattern for an emitter
 	PV_DSP_API void SetEmitterDirectivityPattern(EmissionID id, PlaneverbDSPSourceDirectivityPattern pattern);
 
 	// Updates listener transform, needs world position and forward vector
 	PV_DSP_API void SetListenerTransform(float posX, float posY, float posZ,
-		float forwardX, float forwardY, float forwardZ);
+		float forwardX, float forwardY, float forwardZ,
+		float upX, float upY, float upZ);
 
 	// Submit audio source buffer for processing
+	// @param id Emitter ID of the object sending source
+	// @param dspParams Input parameters copied over from Planeverb output.
+	// @param in Interleaved audio samples.
+	// @param numFrames Number of FRAMES to use. One frame is 2 samples (stereo channels).
 	PV_DSP_API void SendSource(EmissionID id, const PlaneverbDSPInput* dspParams, 
 		const float* in, unsigned numFrames);
 

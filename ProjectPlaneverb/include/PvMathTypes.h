@@ -49,10 +49,10 @@ namespace Planeverb
 
 	struct AABB
 	{
-		vec2 position;
-		Real width;
-		Real height;
-		Real absorption;
+		vec2 position = { 0, 0 };
+		Real width = Real(0);
+		Real height = Real(0);
+		Real absorption = Real(0);
 
 		/*
 			 _________________

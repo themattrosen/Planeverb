@@ -25,7 +25,9 @@ extern "C"
 	PVU_EXPORT void PVU_CC
 	PlaneverbInit(float gridSizeX, float gridSizeY,
 		int gridResolution, int gridBoundaryType, char* tempFileDir, 
-		int maxThreadUsage, int threadExecutionType)
+		int gridCenteringType,
+		float gridWorldOffsetX, float gridWorldOffsetY
+	)
 	{
 		Planeverb::PlaneverbConfig config;
 		config.gridSizeInMeters.x = gridSizeX;
@@ -33,8 +35,9 @@ extern "C"
 		config.gridResolution = gridResolution;
 		config.gridBoundaryType = (Planeverb::PlaneverbBoundaryType)gridBoundaryType;
 		config.tempFileDirectory = tempFileDir;
-		config.maxThreadUsage = maxThreadUsage;
-		config.threadExecutionType = (Planeverb::PlaneverbExecutionType)threadExecutionType;
+		config.gridCenteringType = (Planeverb::PlaneverbGridCenteringType)gridCenteringType;
+		config.gridWorldOffset.x = gridWorldOffsetX;
+		config.gridWorldOffset.y = gridWorldOffsetY;
 
 		Planeverb::Init(&config);
 	}
@@ -46,23 +49,24 @@ extern "C"
 	}
 
 	PVU_EXPORT int PVU_CC
-	PlaneverbEmit(float x, float y, float z)
+	PlaneverbAddEmitter(float x, float y, float z)
 	{
-		return (int)Planeverb::Emit(Planeverb::vec3(x, y, z));
+		return (int)Planeverb::AddEmitter(Planeverb::vec3(x, y, z));
 	}
 
 	PVU_EXPORT void PVU_CC
-	PlaneverbUpdateEmission(int id, float x, float y, float z)
+	PlaneverbUpdateEmitter(int id, float x, float y, float z)
 	{
-		Planeverb::UpdateEmission((Planeverb::EmissionID)id, Planeverb::vec3(x, y, z));
+		Planeverb::UpdateEmitter((Planeverb::EmissionID)id, Planeverb::vec3(x, y, z));
 	}
 
 	PVU_EXPORT void PVU_CC
-	PlaneverbEndEmission(int id)
+	PlaneverbRemoveEmitter(int id)
 	{
-		Planeverb::EndEmission((Planeverb::EmissionID)id);
+		Planeverb::RemoveEmitter((Planeverb::EmissionID)id);
 	}
 
+	// Output struct with only primitives
 	struct PlaneverbOutput
 	{
 		float occlusion;

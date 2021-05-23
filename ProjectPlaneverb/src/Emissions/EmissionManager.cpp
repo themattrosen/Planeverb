@@ -5,26 +5,26 @@
 namespace Planeverb
 {
 #pragma region ClientInterface
-	EmissionID Emit(const vec3& emitterPosition)
+	EmissionID AddEmitter(const vec3& emitterPosition)
 	{
 		auto* context = GetContext();
 		if (context)
-			return context->GetEmissionManager()->Emit(emitterPosition);
+			return context->GetEmissionManager()->AddEmitter(emitterPosition);
 		return PV_INVALID_EMISSION_ID;
 	}
 
-	void UpdateEmission(EmissionID id, const vec3& position)
+	void UpdateEmitter(EmissionID id, const vec3& position)
 	{
 		auto* context = GetContext();
 		if (context)
-			context->GetEmissionManager()->UpdateEmission(id, position);
+			context->GetEmissionManager()->UpdateEmitter(id, position);
 	}
 
-	void EndEmission(EmissionID id)
+	void RemoveEmitter(EmissionID id)
 	{
 		auto* context = GetContext();
 		if (context)
-			context->GetEmissionManager()->EndEmission(id);
+			context->GetEmissionManager()->RemoveEmitter(id);
 	}
 #pragma endregion
 
@@ -34,7 +34,7 @@ namespace Planeverb
 		m_openSlots.~vector();
 	}
 
-	EmissionID EmissionManager::Emit(const vec3 & emitterPosition)
+	EmissionID EmissionManager::AddEmitter(const vec3 & emitterPosition)
 	{
 		// case there is an ID that can be reused
 		if (!m_openSlots.empty())
@@ -53,14 +53,14 @@ namespace Planeverb
 		}
 	}
 
-	void EmissionManager::UpdateEmission(EmissionID id, const vec3 & pos)
+	void EmissionManager::UpdateEmitter(EmissionID id, const vec3 & pos)
 	{
 		int size = (int)m_emitterPositions.size();
 		if(id >= 0 && id < size)
 			m_emitterPositions[id] = pos;
 	}
 
-	void EmissionManager::EndEmission(EmissionID id)
+	void EmissionManager::RemoveEmitter(EmissionID id)
 	{
 		// add to the open slots to be reused
 		m_openSlots.push_back(id);

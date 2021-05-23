@@ -20,13 +20,13 @@ namespace Planeverb
 	PV_API void ChangeSettings(const PlaneverbConfig* newConfig);
 
 	// Begin tracking a new sound being played
-	PV_API EmissionID Emit(const vec3& emitterPosition);
+	PV_API EmissionID AddEmitter(const vec3& emitterPosition);
 
 	// Update information about a given emission
-	PV_API void UpdateEmission(EmissionID id, const vec3& position);
+	PV_API void UpdateEmitter(EmissionID id, const vec3& position);
 
 	// Stop tracking a sound that's finished playing
-	PV_API void EndEmission(EmissionID id);
+	PV_API void RemoveEmitter(EmissionID id);
 
 	// Retrieve acoustic output for a given emitter
 	PV_API PlaneverbOutput GetOutput(EmissionID emitter);

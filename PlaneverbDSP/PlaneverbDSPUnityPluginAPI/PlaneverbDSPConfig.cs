@@ -19,6 +19,9 @@ namespace Planeverb
 
 		[Tooltip("Ratio for how much the reverberant sound affects the audio.")]
 		public float wetGainRatio;
+
+		[Tooltip("Max number of emitters allowed in the scene at the same time. This includes emitters outside the Planeverb acoustic grid.")]
+		public int maxEmitters;
 	}
 
 } // namespace PlaneverbDSP

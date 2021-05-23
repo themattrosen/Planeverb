@@ -25,14 +25,16 @@ namespace Planeverb
 
 		// assume each emitter can only emit one sound at a time for simplicity
 		// this isn't meant to be an audio engine demonstration
-		private int id = -1;
+		private int pvID = -1;
+		private int dspID = -1;
 		private PlaneverbOutput output = new PlaneverbOutput();
 		private PlaneverbAudioSource source = null;
 
-		public int GetID() { return id; }
+		public int GetPlaneverbID() { return pvID; }
+		public int GetDSPID() { return dspID; }
+
 		public PlaneverbOutput GetOutput()
 		{
-
 			return output;
 		}
 
@@ -49,20 +51,20 @@ namespace Planeverb
 		void Update()
 		{
 			// case needs to update PV information
-			if (id >= 0)
+			if (pvID >= 0)
 			{ 
 				// case this object is currently playing: update the emission, and update the output
 				if(source)
 				{
-					PlaneverbContext.UpdateEmission(id, transform.position);
-					PlaneverbDSPContext.UpateEmitter(id, transform.position, transform.forward);
-					output = PlaneverbContext.GetOutput(id);
+					PlaneverbContext.UpdateEmitter(pvID, transform.position);
+					PlaneverbDSPContext.UpdateEmitter(dspID, transform.position, transform.forward, transform.up);
+					output = PlaneverbContext.GetOutput(pvID);
 				}
 				// case this emission has ended since the last frame: end emission and reset the id
 				else
 				{
 					OnEndEmission();
-					id = -1;
+					pvID = -1;
 				}
 
 				if(PlaneverbContext.GetInstance().debugDraw)
@@ -76,7 +78,7 @@ namespace Planeverb
 		{
 			// case currently playing, end the emission in Planeverb
 			// after Destroy, any PlaneverbAudioSource objects will detect it and destroy themselves
-			if (id >= 0)
+			if (pvID >= 0)
 			{
 				OnEndEmission();
 			}
@@ -88,11 +90,11 @@ namespace Planeverb
 		public void Emit()
 		{
 			// start the emission and create the source
-			id = PlaneverbContext.Emit(transform.position);
-			PlaneverbDSPContext.UpateEmitter(id, transform.position, transform.forward);
-			PlaneverbDSPContext.SetEmitterDirectivityPattern(id, DirectivityPattern);
-			output = PlaneverbContext.GetOutput(id);
-			source = PlaneverbAudioManager.pvDSPAudioManager.Play(Clip, id, this, Loop);
+			pvID = PlaneverbContext.AddEmitter(transform.position);
+			dspID = PlaneverbDSPContext.AddEmitter(transform.position, transform.forward, transform.up);
+			PlaneverbDSPContext.SetEmitterDirectivityPattern(dspID, DirectivityPattern);
+			output = PlaneverbContext.GetOutput(pvID);
+			source = PlaneverbAudioManager.pvDSPAudioManager.Play(Clip, dspID, this, Loop);
 			if(source == null)
 			{
 				OnEndEmission();
@@ -102,11 +104,11 @@ namespace Planeverb
 		public void Emit(AudioClip clipToPlay)
 		{
 			// start the emission and create the source
-			id = PlaneverbContext.Emit(transform.position);
-			PlaneverbDSPContext.UpateEmitter(id, transform.position, transform.forward);
-			PlaneverbDSPContext.SetEmitterDirectivityPattern(id, DirectivityPattern);
-			output = PlaneverbContext.GetOutput(id);
-			source = PlaneverbAudioManager.pvDSPAudioManager.Play(clipToPlay, id, this, Loop);
+			pvID = PlaneverbContext.AddEmitter(transform.position);
+			dspID = PlaneverbDSPContext.AddEmitter(transform.position, transform.forward, transform.up);
+			PlaneverbDSPContext.SetEmitterDirectivityPattern(dspID, DirectivityPattern);
+			output = PlaneverbContext.GetOutput(pvID);
+			source = PlaneverbAudioManager.pvDSPAudioManager.Play(clipToPlay, dspID, this, Loop);
 			if (source == null)
 			{
 				OnEndEmission();
@@ -116,8 +118,9 @@ namespace Planeverb
 		public void OnEndEmission()
 		{
 			// end the emission in planeverb, and reset ID
-			PlaneverbContext.EndEmission(id);
-			id = -1;
+			PlaneverbContext.RemoveEmitter(pvID);
+			PlaneverbDSPContext.RemoveEmitter(dspID);
+			pvID = -1;
 		}
 
 		public float GetVolumeGain()

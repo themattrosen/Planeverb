@@ -18,14 +18,14 @@ namespace Planeverb
 
 			// init listener information in both contexts
 			PlaneverbContext.SetListenerPosition(transform.position);
-			PlaneverbDSPContext.SetListenerTransform(transform.position, transform.forward);
+			PlaneverbDSPContext.SetListenerTransform(transform.position, transform.forward, transform.up);
 		}
 
 		void Update()
 		{
 			// update listener information in both contexts
 			PlaneverbContext.SetListenerPosition(transform.position);
-			PlaneverbDSPContext.SetListenerTransform(transform.position, transform.forward);
+			PlaneverbDSPContext.SetListenerTransform(transform.position, transform.forward, transform.up);
 			oldPosition = transform.position;
 
 			if(PlaneverbContext.GetInstance().debugDraw)
@@ -45,6 +45,11 @@ namespace Planeverb
 		{
 			return transform.forward;
 		}
+
+		public Vector3 GetUp()
+        {
+			return transform.up;
+        }
 
 		public bool HasYChange()
 		{

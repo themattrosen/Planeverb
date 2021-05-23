@@ -17,9 +17,9 @@ namespace Planeverb
 
 		~EmissionManager();
 
-		EmissionID Emit(const vec3& emitterPosition);
-		void UpdateEmission(EmissionID id, const vec3& pos);
-		void EndEmission(EmissionID id);
+		EmissionID AddEmitter(const vec3& emitterPosition);
+		void UpdateEmitter(EmissionID id, const vec3& pos);
+		void RemoveEmitter(EmissionID id);
 
 		const vec3* GetEmitter(EmissionID id) const;
 		static unsigned GetMemoryRequirement(const struct PlaneverbConfig* config);

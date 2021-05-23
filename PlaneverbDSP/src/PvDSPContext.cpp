@@ -9,6 +9,21 @@
 #include <cmath>
 #include <algorithm>
 
+namespace
+{
+	PV_DSP_INLINE float CalculateLPFCutoff(float distance)
+	{
+		// get input distance driven by inverse of occlusion. If occlusion is very small, cap out at "lots of occlusion"
+		const float r = distance;
+
+		// Find LPF cutoff frequency by feeding into equation: y = -147 + (18390) / (1 + (x / 12)^0.8 )
+		const float powNumer = r / 12.f;
+		const float denom = 1.f + std::pow(powNumer, 0.8f);
+		const float fraction = (18390.f) / (denom);
+		return -147.f + fraction;
+	}
+}
+
 namespace PlaneverbDSP
 {
 	#pragma region ClientInterface
@@ -64,27 +79,67 @@ namespace PlaneverbDSP
 
 	// sends listener data to the context
 	void SetListenerTransform(float posX, float posY, float posZ,
-		float forwardX, float forwardY, float forwardZ)
+		float forwardX, float forwardY, float forwardZ,
+		float upX, float upY, float upZ)
 	{
 		if(g_context)
-			g_context->SetListenerTransform({ posX, posY, posZ }, { forwardX, forwardY, forwardZ });
+			g_context->SetListenerTransform(
+				{ posX, posY, posZ }
+				, { forwardX, forwardY, forwardZ }
+				, { upX, upY, upZ }
+			);
 	}
 
-	void UpdateEmitter(EmissionID id, float posX, float posY, float posZ,
-		float forwardX, float forwardY, float forwardZ)
+	EmissionID AddEmitter(float posX, float posY, float posZ,
+		float forwardX, float forwardY, float forwardZ,
+		float upX, float upY, float upZ)
 	{
 		if (g_context)
 		{
-			auto& data = g_context->GetEmissionManager()->GetDataTarget(id);
-			data.forward = { forwardX, forwardZ };
-			data.position = { posX, posZ };
+			auto* manager = g_context->GetEmissionManager();
+			return manager->AddEmitter({posX, posY, posZ}, 
+				{forwardX, forwardY, forwardZ},
+				{ upX, upY, upZ});
+		}
+
+		return PV_INVALID_EMISSION_ID;
+	}
+
+	void UpdateEmitter(EmissionID id, float posX, float posY, float posZ,
+		float forwardX, float forwardY, float forwardZ,
+		float upX, float upY, float upZ)
+	{
+		if (g_context && id != PV_INVALID_EMISSION_ID)
+		{
+			auto* data = g_context->GetEmissionManager()->GetDataTarget(id);
+			if (data)
+			{
+				data->forward = { forwardX, forwardY, forwardZ };
+				data->position = { posX, posY, posZ };
+				data->up = { upX, upY, upZ };
+			}
+		}
+	}
+
+	void RemoveEmitter(EmissionID id)
+	{
+		if (g_context && id != PV_INVALID_EMISSION_ID)
+		{
+			g_context->GetEmissionManager()->RemoveEmission(id);
 		}
 	}
 
 	void SetEmitterDirectivityPattern(EmissionID id, PlaneverbDSPSourceDirectivityPattern pattern)
 	{
 		if (g_context)
-			g_context->GetEmissionManager()->GetDataTarget(id).directivityPattern = pattern;
+		{
+			auto* target = g_context->GetEmissionManager()->GetDataTarget(id);
+			if (target)
+			{
+				target->directivityPattern = pattern;
+				g_context->GetEmissionManager()->GetDataCurrent(id)->directivityPattern = pattern;
+			}
+		}
 	}
 	#pragma endregion
 
@@ -94,7 +149,10 @@ namespace PlaneverbDSP
 		std::memcpy(&m_config, config, sizeof(PlaneverbDSPConfig));
 
 		// throw if input is invalid
-		if (config->maxCallbackLength > PV_DSP_MAX_CALLBACK_LENGTH || config->dspSmoothingFactor <= 0)
+		if (config->maxCallbackLength > PV_DSP_MAX_CALLBACK_LENGTH 
+			|| config->dspSmoothingFactor <= 0 
+			|| config->maxEmitters == (unsigned)(-1) 
+			|| config->maxEmitters < 1)
 		{
 			throw pvd_InvalidConfig;
 		}
@@ -136,16 +194,20 @@ namespace PlaneverbDSP
 		m_responseA = reinterpret_cast<ImpulseResponse*>(temp); temp += sizeof(ImpulseResponse);
 		m_convolverA = reinterpret_cast<Convolver*>(temp); temp += sizeof(Convolver);
 
-		m_emissions = new (m_emissions) EmissionsManager((float)m_config.samplingRate);
+		m_emissions = new (m_emissions) EmissionsManager((float)m_config.samplingRate, m_config.maxEmitters);
 		m_responseA = new (m_responseA) ImpulseResponse(PV_DSP_T_ER_1, (float)m_config.samplingRate);
 		m_convolverA = new (m_convolverA) Convolver(m_responseA);
 
 		m_listenerTransform.position = { 0, 0, 0 };
 		m_listenerTransform.forward  = { 1, 0, 0 };
+		m_listenerTransform.up = { 0, 1, 0 };
+
+		m_isRunning = true;
 	}
 
 	Context::~Context()
 	{
+		m_isRunning = false;
 		m_convolverA->~Convolver();
 		m_responseA->~ImpulseResponse();
 		m_emissions->~EmissionsManager();
@@ -250,182 +312,394 @@ namespace PlaneverbDSP
 	void Context::SubmitSource(EmissionID id, const PlaneverbDSPInput* dspParams,
 		const float* in, unsigned numFrames)
 	{
+		if (!m_isRunning)
+			return;
+
 		m_numFrames = (int)numFrames > m_numFrames ? (int)numFrames : m_numFrames;
 		int numChannels = (int)PV_DSP_CHANNEL_COUNT;
 		int numSamples = numFrames * numChannels;
+		auto* targetData = m_emissions->GetDataTarget(id);
+		if (targetData == nullptr)
+			return;
 
-		// don't do anything if input is invalid
+		// case for input outside of Planeverb grid reach
 		if(dspParams->lowpass < PV_DSP_MIN_AUDIBLE_FREQ || dspParams->lowpass > PV_DSP_MAX_AUDIBLE_FREQ ||
 			dspParams->obstructionGain <= 0.f ||
 			(dspParams->direction.x == 0.f && dspParams->direction.y == 0.f))
 		{
-			return;
-		}
+			/////////////////////////////
+			// Calculate all gains first
 
-		/////////////////////////////
-		// Calculate all gains first
+			// determine lerp factor
+			float lerpFactor = 1.f / ((float)m_numFrames * (float)m_config.dspSmoothingFactor);
 
-		// determine lerp factor
-		float lerpFactor = 1.f / ((float)m_numFrames * (float)m_config.dspSmoothingFactor);
+			auto& emissionData = *m_emissions->GetDataTarget(id);
+			auto& currentData = *m_emissions->GetDataCurrent(id);
 
-		// determine each reverb gain target
-		float revGainA = FindGainA(dspParams->rt60, dspParams->wetGain);
-		float revGainB = FindGainB(dspParams->rt60, dspParams->wetGain);
-		float revGainC = FindGainC(dspParams->rt60, dspParams->wetGain);
+			//////////////////////////////////
+			// find distance attenuation gains
 
-		// get target and current emission data
-		auto& emissionData = m_emissions->GetDataTarget(id);
-		emissionData.lpf.SetCutoff(dspParams->lowpass);
-		emissionData.occlusion = dspParams->obstructionGain;
-		emissionData.wetGain = dspParams->wetGain;
-		emissionData.rt60 = dspParams->rt60;
-		emissionData.direction.x = dspParams->direction.x;
-		emissionData.direction.y = dspParams->direction.y;
-		emissionData.directivity.x = dspParams->sourceDirectivity.x;
-		emissionData.directivity.y = dspParams->sourceDirectivity.y;
+			// figure out distance attenuation values
+			// calculate target
+			// distance
+			float targetEuclideanDistance = m_listenerTransform.position.Distance(emissionData.position);
+			// clamp above 1
+			targetEuclideanDistance = (targetEuclideanDistance < 1.f) ? 1.f : targetEuclideanDistance;
+			// 3D distance attenuation 1/r^2
+			float targetDistanceAttenuation = 1.f / (targetEuclideanDistance * targetEuclideanDistance);
 
-		auto& currentData = m_emissions->GetDataCurrent(id);
-		float currRevGainA = FindGainA(currentData.rt60, currentData.wetGain);
-		float currRevGainB = FindGainB(currentData.rt60, currentData.wetGain);
-		float currRevGainC = FindGainC(currentData.rt60, currentData.wetGain);
-		float currDryGain = currentData.occlusion;
+			// calculate current
+			// distance
+			float currentEuclideanDistance = m_listenerTransform.position.Distance(currentData.position);
+			// clamp above 1
+			currentEuclideanDistance = (currentEuclideanDistance < 1.f) ? 1.f : currentEuclideanDistance;
+			// 3D distance attenuation 1/r^2
+			float currentDistanceAttenuation = 1.f / (currentEuclideanDistance * currentEuclideanDistance);
 
-		// determine panning current and target values
-		float targetleft = 1.f, targetright = 1.f;
-		float currentleft = 1.f, currentright = 1.f;
-		if (m_config.useSpatialization)
-		{
-			vec2 dir = dspParams->direction;
-			float angle = std::atan2f(m_listenerTransform.forward.z, m_listenerTransform.forward.x);
-			float phi = std::atan2f(dir.y, dir.x);
-			float aphi = std::abs(phi);
-			float premapped = angle - phi;
-			float theta = premapped / 2.f;
-			float ct = std::cos(theta);
-			float st = std::sin(theta);
-			targetleft = PV_DSP_INV_SQRT_2 * (ct - st);
-			targetright = PV_DSP_INV_SQRT_2 * (ct + st);
+			///////////////////////////////////////////////
+			// determine panning current and target values
+			float targetleft = 1.f, targetright = 1.f;
+			float currentleft = 1.f, currentright = 1.f;
+			vec3 toTargetDirectionVector(emissionData.position - m_listenerTransform.position);
+			toTargetDirectionVector.Normalize();
 
-			dir = currentData.direction;
-			phi = std::atan2f(dir.y, dir.x);
-			aphi = std::abs(phi);
-			premapped = angle - phi;
-			theta = premapped / 2.f;
-			ct = std::cos(theta);
-			st = std::sin(theta);
-			currentleft = PV_DSP_INV_SQRT_2 * (ct - st);
-			currentright = PV_DSP_INV_SQRT_2 * (ct + st);
-		}
+			vec3 toCurrentDirectionVector(currentData.position - m_listenerTransform.position);
+			toCurrentDirectionVector.Normalize();
 
-		// figure out source directivity current and target values
-		PlaneverbDSPSourceDirectivityPattern pattern = currentData.directivityPattern;
-		float targetDirectivityGain = directivityPatternFuncs[pattern](emissionData.directivity, emissionData.forward);
-		float currentDirectivityGain = directivityPatternFuncs[pattern](currentData.directivity, emissionData.forward);
-
-		// figure out distance attenuation values
-		//TODO: These should be 3D attenuation value
-		vec2 dist = { m_listenerTransform.position.x - emissionData.position.x, m_listenerTransform.position.z - emissionData.position.y };
-		float euclideanDistance = std::sqrt(dist.x * dist.x + dist.y * dist.y);
-		euclideanDistance = (euclideanDistance < 1.f) ? 1.f : euclideanDistance;
-		float targetDistanceAttenuation = 1.f / euclideanDistance;
-
-		dist = { m_listenerTransform.position.x - currentData.position.x, m_listenerTransform.position.z - currentData.position.y };
-		euclideanDistance = std::sqrt(dist.x * dist.x + dist.y * dist.y);
-		euclideanDistance = (euclideanDistance < 1.f) ? 1.f : euclideanDistance;
-		float currentDistanceAttenuation = 1.f / euclideanDistance;
-		
-		float targetDryGain = std::max(emissionData.occlusion, PV_DSP_MIN_DRY_GAIN);
-
-		////////////////////////////////////////
-		// Run all processing after calculation
-
-		// copy input into internal storage -> Sum to mono
-		float* inputStoragePtr = m_inputStorage;
-		const float* inputPtr = in;
-		for (unsigned i = 0; i < numFrames; ++i)
-		{
-			float left = *inputPtr++;
-			float right = *inputPtr++;
-			*inputStoragePtr++ = (left + right) * 0.5f;
-		}
-		inputStoragePtr = m_inputStorage;
-
-		// process lowpass on copy of input signal
-		emissionData.lpf.Process(m_inputStorage, 0, 1, numFrames, dspParams->lowpass, lerpFactor);
-
-		// apply wet gain
-		{
-			const int NUM_TASKS = 3;
-			float* bufArray[NUM_TASKS] = {
-				m_wetOutputA,
-				m_wetOutputB,
-				m_wetOutputC
-			};
-			float targetGainArray[NUM_TASKS] = { revGainA, revGainB, revGainC };
-			float currentGainArray[NUM_TASKS] = { currRevGainA, currRevGainB, currRevGainC };
-			auto processFunc = [&](float* buf, const float* in, float targetRevGain, float currRevGain, int frames)
+			if (m_config.useSpatialization)
 			{
-				for (int j = 0; j < frames; ++j)
-				{
-					*buf++ = *in * currRevGain * m_config.wetGainRatio;
-					*buf++ = *in * currRevGain * m_config.wetGainRatio;
-					++in;
-					currRevGain = LERP_FLOAT(currRevGain, targetRevGain, lerpFactor);
-				}
-			};
+				
+				vec2 dir(toTargetDirectionVector.x, toTargetDirectionVector.z);
+				float angle = std::atan2f(m_listenerTransform.forward.z, m_listenerTransform.forward.x);
+				float phi = std::atan2f(dir.y, dir.x);
+				float aphi = std::abs(phi);
+				float premapped = angle - phi;
+				float theta = premapped / 2.f;
+				float ct = std::cos(theta);
+				float st = std::sin(theta);
+				targetleft = PV_DSP_INV_SQRT_2 * (ct - st);
+				targetright = PV_DSP_INV_SQRT_2 * (ct + st);
 
-			for (int i = 0; i < NUM_TASKS; ++i)
-			{
-				processFunc(bufArray[i], inputStoragePtr, targetGainArray[i], currentGainArray[i], numFrames);
+				dir = vec2(toCurrentDirectionVector.x, toCurrentDirectionVector.z);
+				phi = std::atan2f(dir.y, dir.x);
+				aphi = std::abs(phi);
+				premapped = angle - phi;
+				theta = premapped / 2.f;
+				ct = std::cos(theta);
+				st = std::sin(theta);
+				currentleft = PV_DSP_INV_SQRT_2 * (ct - st);
+				currentright = PV_DSP_INV_SQRT_2 * (ct + st);
 			}
-		}
 
-		// apply dry gains
-		for (int i = 0; i < m_numFrames; ++i)
-		{
-			float nextGain = currDryGain * currentDirectivityGain * currentDistanceAttenuation;
-			*inputStoragePtr++ *= nextGain;
+			////////////////////////////////////
+			// figure out source directivity current and target values
+			PlaneverbDSPSourceDirectivityPattern pattern = currentData.directivityPattern;
+			// flatten transform to 2D
+			vec2 targetFlatForward(emissionData.forward.x, emissionData.forward.z);
+			vec2 currentFlatForward(currentData.forward.x, currentData.forward.z);
+
+			// handle case forward is straight up
+			if (emissionData.forward.x == 0.0f && emissionData.forward.z == 0.0f)
+			{
+				targetFlatForward.x = -emissionData.up.x;
+				targetFlatForward.y = -emissionData.up.z;
+			}
+			if (currentData.forward.x == 0.0f && currentData.forward.z == 0.0f)
+			{
+				currentFlatForward.x = -currentData.up.x;
+				currentFlatForward.y = -currentData.up.z;
+			}
+
+			// normalize to fully project into x/z plane
+			targetFlatForward.Normalize();
+			currentFlatForward.Normalize();
+
+			// determine default directivity pattern assuming no obstacles (opposite of the direction vector)
+			vec2 targetDirectivity(-toTargetDirectionVector.x, -toTargetDirectionVector.z);
+			emissionData.directivity = targetDirectivity;
+
+			// get directivity gains
+			float targetDirectivityGain = directivityPatternFuncs[pattern](targetDirectivity, targetFlatForward);
+			float currentDirectivityGain = directivityPatternFuncs[pattern](currentData.directivity, currentFlatForward);
+
+			//////////////////////////////////////
+			// find lowpass filtering coefficient
+			const float targetCutoff(CalculateLPFCutoff(targetEuclideanDistance));
+
+			//////////////////////////////
+			// process input
 			
-			currDryGain = LERP_FLOAT(currDryGain, targetDryGain, lerpFactor);
-			currentDirectivityGain = LERP_FLOAT(currentDirectivityGain, targetDirectivityGain, lerpFactor);
-			currentDistanceAttenuation = LERP_FLOAT(currentDistanceAttenuation, targetDistanceAttenuation, lerpFactor);
-		}
-		inputStoragePtr = m_inputStorage;
+			// copy input into internal storage -> Sum to mono
+			float* inputStoragePtr = m_inputStorage;
+			const float* inputPtr = in;
+			for (unsigned i = 0; i < numFrames; ++i)
+			{
+				float left = *inputPtr++;
+				float right = *inputPtr++;
+				*inputStoragePtr++ = (left + right) * 0.5f;
+			}
+			inputStoragePtr = m_inputStorage;
 
-		// apply spatialization
-		float* dryPtr = m_dryOutput;
-		inputStoragePtr = m_inputStorage;
-		for (unsigned i = 0; i < numFrames; ++i)
+			// process lowpass on copy of input signal
+			emissionData.lpf.Process(m_inputStorage, 0, 1, numFrames, targetCutoff, lerpFactor);
+
+			// apply dry gains
+			for (int i = 0; i < m_numFrames; ++i)
+			{
+				float nextGain = currentDistanceAttenuation * currentDirectivityGain;
+				*inputStoragePtr++ *= nextGain;
+
+				currentDistanceAttenuation = LERP_FLOAT(currentDistanceAttenuation, targetDistanceAttenuation, lerpFactor);
+				currentDirectivityGain = LERP_FLOAT(currentDirectivityGain, targetDirectivityGain, lerpFactor);
+			}
+			inputStoragePtr = m_inputStorage;
+
+			// apply spatialization
+			float* dryPtr = m_dryOutput;
+			inputStoragePtr = m_inputStorage;
+			for (unsigned i = 0; i < numFrames; ++i)
+			{
+				*dryPtr++ += *inputStoragePtr * currentleft;
+				*dryPtr++ += *inputStoragePtr * currentright;
+				currentright = LERP_FLOAT(currentright, targetright, lerpFactor);
+				currentleft = LERP_FLOAT(currentleft, targetleft, lerpFactor);
+				++inputStoragePtr;
+			}
+
+			// lerp the real current data parameters
+			// this can probably be vectorized at some point
+			for (int j = 0; j < m_numFrames; ++j)
+			{
+				currentData.forward.x = LERP_FLOAT(currentData.forward.x, emissionData.forward.x, lerpFactor);
+				currentData.forward.y = LERP_FLOAT(currentData.forward.y, emissionData.forward.y, lerpFactor);
+				currentData.forward.z = LERP_FLOAT(currentData.forward.z, emissionData.forward.z, lerpFactor);
+				currentData.position.x = LERP_FLOAT(currentData.position.x, emissionData.position.x, lerpFactor);
+				currentData.position.y = LERP_FLOAT(currentData.position.y, emissionData.position.y, lerpFactor);
+				currentData.position.z = LERP_FLOAT(currentData.position.z, emissionData.position.z, lerpFactor);
+				currentData.up.x = LERP_FLOAT(currentData.up.x, emissionData.up.x, lerpFactor);
+				currentData.up.y = LERP_FLOAT(currentData.up.y, emissionData.up.y, lerpFactor);
+				currentData.up.z = LERP_FLOAT(currentData.up.z, emissionData.up.z, lerpFactor);
+				currentData.directivity.x = LERP_FLOAT(currentData.directivity.x, emissionData.directivity.x, lerpFactor);
+				currentData.directivity.y = LERP_FLOAT(currentData.directivity.y, emissionData.directivity.y, lerpFactor);
+			}
+
+			currentData.lpf.SetCutoff(emissionData.lpf.GetCutoff());
+		}
+
+		////////////////////////////////////////////
+		// MAJOR CASE: emitter has valid parameters
+		else
 		{
-			*dryPtr++ += *inputStoragePtr * currentleft;
-			*dryPtr++ += *inputStoragePtr * currentright;
-			currentright = LERP_FLOAT(currentright, targetright, lerpFactor);
-			currentleft = LERP_FLOAT(currentleft, targetleft, lerpFactor);
-			++inputStoragePtr;
-		}
+			/////////////////////////////
+			// Calculate all gains first
 
-		// lerp the real current data parameters
-		// this can probably be vectorized at some point
-		currentData.occlusion = currDryGain;
-		for (int j = 0; j < m_numFrames; ++j)
-		{
-			currentData.direction.x = LERP_FLOAT(currentData.direction.x, emissionData.direction.x, lerpFactor);
-			currentData.direction.y = LERP_FLOAT(currentData.direction.y, emissionData.direction.y, lerpFactor);
-			currentData.wetGain = LERP_FLOAT(currentData.wetGain, emissionData.wetGain, lerpFactor);
-			currentData.rt60 = LERP_FLOAT(currentData.rt60, emissionData.rt60, lerpFactor);
-			currentData.forward.x = LERP_FLOAT(currentData.forward.x, emissionData.forward.x, lerpFactor);
-			currentData.forward.y = LERP_FLOAT(currentData.forward.y, emissionData.forward.y, lerpFactor);
-			currentData.directivity.x = LERP_FLOAT(currentData.directivity.x, emissionData.directivity.x, lerpFactor);
-			currentData.directivity.y = LERP_FLOAT(currentData.directivity.y, emissionData.directivity.y, lerpFactor);
-			currentData.position.x = LERP_FLOAT(currentData.position.x, emissionData.position.x, lerpFactor);
-			currentData.position.y = LERP_FLOAT(currentData.position.y, emissionData.position.y, lerpFactor);
-		}
+			// determine lerp factor
+			float lerpFactor = 1.f / ((float)m_numFrames * (float)m_config.dspSmoothingFactor);
 
-		currentData.lpf.SetCutoff(emissionData.lpf.GetCutoff());
+			// determine each reverb gain target
+			float revGainA = FindGainA(dspParams->rt60, dspParams->wetGain);
+			float revGainB = FindGainB(dspParams->rt60, dspParams->wetGain);
+			float revGainC = FindGainC(dspParams->rt60, dspParams->wetGain);
+
+			////////////////////////////////////////
+			// get target and current emission data
+			auto& emissionData = *m_emissions->GetDataTarget(id);
+			emissionData.lpf.SetCutoff(dspParams->lowpass);
+			emissionData.occlusion = dspParams->obstructionGain;
+			emissionData.wetGain = dspParams->wetGain;
+			emissionData.rt60 = dspParams->rt60;
+			emissionData.direction.x = dspParams->direction.x;
+			emissionData.direction.y = dspParams->direction.y;
+			emissionData.directivity.x = dspParams->sourceDirectivity.x;
+			emissionData.directivity.y = dspParams->sourceDirectivity.y;
+
+			auto& currentData = *m_emissions->GetDataCurrent(id);
+			float currRevGainA = FindGainA(currentData.rt60, currentData.wetGain);
+			float currRevGainB = FindGainB(currentData.rt60, currentData.wetGain);
+			float currRevGainC = FindGainC(currentData.rt60, currentData.wetGain);
+
+			///////////////////////////////////////////////
+			// determine panning current and target values
+			float targetleft = 1.f, targetright = 1.f;
+			float currentleft = 1.f, currentright = 1.f;
+			if (m_config.useSpatialization)
+			{
+				vec2 dir = dspParams->direction;
+				float angle = std::atan2f(m_listenerTransform.forward.z, m_listenerTransform.forward.x);
+				float phi = std::atan2f(dir.y, dir.x);
+				float aphi = std::abs(phi);
+				float premapped = angle - phi;
+				float theta = premapped / 2.f;
+				float ct = std::cos(theta);
+				float st = std::sin(theta);
+				targetleft = PV_DSP_INV_SQRT_2 * (ct - st);
+				targetright = PV_DSP_INV_SQRT_2 * (ct + st);
+
+				dir = currentData.direction;
+				phi = std::atan2f(dir.y, dir.x);
+				aphi = std::abs(phi);
+				premapped = angle - phi;
+				theta = premapped / 2.f;
+				ct = std::cos(theta);
+				st = std::sin(theta);
+				currentleft = PV_DSP_INV_SQRT_2 * (ct - st);
+				currentright = PV_DSP_INV_SQRT_2 * (ct + st);
+			}
+
+			/////////////////////////////////////
+			// figure out source directivity current and target values
+			PlaneverbDSPSourceDirectivityPattern pattern = currentData.directivityPattern;
+			// flatten transform to 2D
+			vec2 targetFlatForward(emissionData.forward.x, emissionData.forward.z);
+			vec2 currentFlatForward(currentData.forward.x, currentData.forward.z);
+
+			// handle case forward is straight up
+			if (emissionData.forward.x == 0.0f && emissionData.forward.z == 0.0f)
+			{
+				targetFlatForward.x = -emissionData.up.x;
+				targetFlatForward.y = -emissionData.up.z;
+			}
+			if (currentData.forward.x == 0.0f && currentData.forward.z == 0.0f)
+			{
+				currentFlatForward.x = -currentData.up.x;
+				currentFlatForward.y = -currentData.up.z;
+			}
+
+			// normalize to fully project into x/z plane
+			targetFlatForward.Normalize();
+			currentFlatForward.Normalize();
+
+			// get directivity gains
+			float targetDirectivityGain = directivityPatternFuncs[pattern](emissionData.directivity, targetFlatForward);
+			float currentDirectivityGain = directivityPatternFuncs[pattern](currentData.directivity, currentFlatForward);
+
+			//////////////////////////////////
+			// find distance attenuation gains
+			
+			// figure out distance attenuation values
+			// calculate target
+			// distance
+			float euclideanDistance = m_listenerTransform.position.Distance(emissionData.position);
+			// clamp above 1
+			euclideanDistance = (euclideanDistance < 1.f) ? 1.f : euclideanDistance;
+			// 3D distance attenuation 1/r^2
+			float targetDistanceAttenuation = 1.f / (euclideanDistance * euclideanDistance);
+
+			// calculate current
+			// distance
+			euclideanDistance = m_listenerTransform.position.Distance(currentData.position);
+			// clamp above 1
+			euclideanDistance = (euclideanDistance < 1.f) ? 1.f : euclideanDistance;
+			// 3D distance attenuation 1/r^2
+			float currentDistanceAttenuation = 1.f / (euclideanDistance * euclideanDistance);
+
+			/////////////////////////////////
+			// dry occlusion gain
+			
+			// target occlusion value
+			float targetDryGain = std::max(emissionData.occlusion, PV_DSP_MIN_DRY_GAIN);
+			// current occlusion value
+			float currDryGain = std::max(currentData.occlusion, PV_DSP_MIN_DRY_GAIN);
+
+			////////////////////////////////////////
+			// Run all processing after calculation
+
+			// copy input into internal storage -> Sum to mono
+			float* inputStoragePtr = m_inputStorage;
+			const float* inputPtr = in;
+			for (unsigned i = 0; i < numFrames; ++i)
+			{
+				float left = *inputPtr++;
+				float right = *inputPtr++;
+				*inputStoragePtr++ = (left + right) * 0.5f;
+			}
+			inputStoragePtr = m_inputStorage;
+
+			// process lowpass on copy of input signal
+			emissionData.lpf.Process(m_inputStorage, 0, 1, numFrames, dspParams->lowpass, lerpFactor);
+
+			// apply wet gain
+			{
+				const int NUM_TASKS = 3;
+				float* bufArray[NUM_TASKS] = {
+					m_wetOutputA,
+					m_wetOutputB,
+					m_wetOutputC
+				};
+				float targetGainArray[NUM_TASKS] = { revGainA, revGainB, revGainC };
+				float currentGainArray[NUM_TASKS] = { currRevGainA, currRevGainB, currRevGainC };
+				auto processFunc = [&](float* buf, const float* in, float targetRevGain, float currRevGain, int frames)
+				{
+					for (int j = 0; j < frames; ++j)
+					{
+						*buf++ = *in * currRevGain * m_config.wetGainRatio;
+						*buf++ = *in * currRevGain * m_config.wetGainRatio;
+						++in;
+						currRevGain = LERP_FLOAT(currRevGain, targetRevGain, lerpFactor);
+					}
+				};
+
+				for (int i = 0; i < NUM_TASKS; ++i)
+				{
+					processFunc(bufArray[i], inputStoragePtr, targetGainArray[i], currentGainArray[i], numFrames);
+				}
+			}
+
+			// apply dry gains
+			for (int i = 0; i < m_numFrames; ++i)
+			{
+				float nextGain = currDryGain * currentDirectivityGain * currentDistanceAttenuation;
+				*inputStoragePtr++ *= nextGain;
+
+				currDryGain = LERP_FLOAT(currDryGain, targetDryGain, lerpFactor);
+				currentDirectivityGain = LERP_FLOAT(currentDirectivityGain, targetDirectivityGain, lerpFactor);
+				currentDistanceAttenuation = LERP_FLOAT(currentDistanceAttenuation, targetDistanceAttenuation, lerpFactor);
+			}
+			inputStoragePtr = m_inputStorage;
+
+			// apply spatialization
+			float* dryPtr = m_dryOutput;
+			inputStoragePtr = m_inputStorage;
+			for (unsigned i = 0; i < numFrames; ++i)
+			{
+				*dryPtr++ += *inputStoragePtr * currentleft;
+				*dryPtr++ += *inputStoragePtr * currentright;
+				currentright = LERP_FLOAT(currentright, targetright, lerpFactor);
+				currentleft = LERP_FLOAT(currentleft, targetleft, lerpFactor);
+				++inputStoragePtr;
+			}
+
+			// lerp the real current data parameters
+			// this can probably be vectorized at some point
+			currentData.occlusion = currDryGain;
+			for (int j = 0; j < m_numFrames; ++j)
+			{
+				currentData.direction.x = LERP_FLOAT(currentData.direction.x, emissionData.direction.x, lerpFactor);
+				currentData.direction.y = LERP_FLOAT(currentData.direction.y, emissionData.direction.y, lerpFactor);
+				currentData.directivity.x = LERP_FLOAT(currentData.directivity.x, emissionData.directivity.x, lerpFactor);
+				currentData.directivity.y = LERP_FLOAT(currentData.directivity.y, emissionData.directivity.y, lerpFactor);
+				currentData.wetGain = LERP_FLOAT(currentData.wetGain, emissionData.wetGain, lerpFactor);
+				currentData.rt60 = LERP_FLOAT(currentData.rt60, emissionData.rt60, lerpFactor);
+				currentData.forward.x = LERP_FLOAT(currentData.forward.x, emissionData.forward.x, lerpFactor);
+				currentData.forward.y = LERP_FLOAT(currentData.forward.y, emissionData.forward.y, lerpFactor);
+				currentData.forward.z = LERP_FLOAT(currentData.forward.z, emissionData.forward.z, lerpFactor);
+				currentData.position.x = LERP_FLOAT(currentData.position.x, emissionData.position.x, lerpFactor);
+				currentData.position.y = LERP_FLOAT(currentData.position.y, emissionData.position.y, lerpFactor);
+				currentData.position.z = LERP_FLOAT(currentData.position.z, emissionData.position.z, lerpFactor);
+				currentData.up.x = LERP_FLOAT(currentData.up.x, emissionData.up.x, lerpFactor);
+				currentData.up.y = LERP_FLOAT(currentData.up.y, emissionData.up.y, lerpFactor);
+				currentData.up.z = LERP_FLOAT(currentData.up.z, emissionData.up.z, lerpFactor);
+			}
+
+			currentData.lpf.SetCutoff(emissionData.lpf.GetCutoff());
+		}
 	}
 
 	void Context::GetOutput(float** dryOut, float** outA, float** outB, float** outC)
 	{
+		if (!m_isRunning)
+			return;
+
 		*dryOut = m_dryOutput;
 		*outA = m_wetOutputA;
 		*outB = m_wetOutputB;
@@ -448,13 +722,14 @@ namespace PlaneverbDSP
 		}
 		
 		// reset all memory in the fresh buffers
-		std::memset(m_dryOutput, 0, m_bufferSize * 4);
+		std::memset(m_dryOutput, 0, m_bufferSize * 4u);
 	}
 
-	void Context::SetListenerTransform(const vec3 & position, const vec3 & forward)
+	void Context::SetListenerTransform(const vec3& position, const vec3& forward, const vec3& up)
 	{
 		m_listenerTransform.position = position;
 		m_listenerTransform.forward = forward;
+		m_listenerTransform.up = up;
 	}
 }
 

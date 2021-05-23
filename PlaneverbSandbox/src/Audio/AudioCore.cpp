@@ -43,9 +43,14 @@ void AudioCore::Init()
 
 void AudioCore::Update(const Planeverb::vec3& pos)
 {
-	if (m_data.id != Planeverb::PV_INVALID_EMISSION_ID)
+	if (m_data.planeverbID != Planeverb::PV_INVALID_EMISSION_ID)
 	{
-		Planeverb::UpdateEmission(m_data.id, pos);
+		Planeverb::UpdateEmitter(m_data.planeverbID, pos);
+		PlaneverbDSP::UpdateEmitter(m_data.dspID
+			, pos.x, pos.y, pos.z
+			, 1, 0, 0
+			, 0, 1, 0
+		);
 	}
 }
 
@@ -60,16 +65,21 @@ void AudioCore::Exit()
 void AudioCore::StopAudio()
 {
 	m_data.currentlyPlaying = false;
-	Planeverb::EndEmission(m_data.id);
-	m_data.id = Planeverb::PV_INVALID_EMISSION_ID;
+	Planeverb::RemoveEmitter(m_data.planeverbID);
+	PlaneverbDSP::RemoveEmitter(m_data.dspID);
+	m_data.planeverbID = Planeverb::PV_INVALID_EMISSION_ID;
+	m_data.dspID = PlaneverbDSP::PV_INVALID_EMISSION_ID;
 }
 
 Planeverb::EmissionID AudioCore::PlayAudio(const Planeverb::vec3& emitter)
 {
 	m_data.currentlyPlaying = true;
 	m_data.readIndex = 0;
-	m_data.id = Planeverb::Emit(emitter);
-	return m_data.id;
+	m_data.planeverbID = Planeverb::AddEmitter(emitter);
+	m_data.dspID = PlaneverbDSP::AddEmitter(emitter.x, emitter.y, emitter.z
+		, 1, 0, 0
+		, 0, 1, 0);
+	return m_data.planeverbID;
 }
 
 float & AudioCore::GetVolume()
@@ -92,7 +102,7 @@ void AudioCore::ProcessBlock(float * out, int frames)
 	int samples = frames * CHANNELS;
 	std::memset(out, 0, sizeof(float) * samples);
 	int samplesToCopy = samples;
-	auto pvoutput = Planeverb::GetOutput(m_data.id);
+	auto pvoutput = Planeverb::GetOutput(m_data.planeverbID);
 	float dryGain = pvoutput.occlusion;
 
 	if (!m_data.usePlaneverb)
@@ -116,7 +126,10 @@ void AudioCore::ProcessBlock(float * out, int frames)
 		{
 			samplesToCopy = size - readIndex;
 			m_data.currentlyPlaying = false;
-			Planeverb::EndEmission(m_data.id);
+			Planeverb::RemoveEmitter(m_data.planeverbID);
+			PlaneverbDSP::RemoveEmitter(m_data.dspID);
+			m_data.planeverbID = Planeverb::PV_INVALID_EMISSION_ID;
+			m_data.dspID = PlaneverbDSP::PV_INVALID_EMISSION_ID;
 		}
 
 		for (int i = 0; i < samplesToCopy; ++i)
@@ -161,12 +174,12 @@ void AudioCore::ProcessBlock(float * out, int frames)
 		{
 			samplesToCopy = size - readIndex;
 			m_data.currentlyPlaying = false;
-			Planeverb::EndEmission(m_data.id);
+			Planeverb::RemoveEmitter(m_data.planeverbID);
+			PlaneverbDSP::RemoveEmitter(m_data.dspID);
 		}
 		
-		//std::memcpy(out, dataArray, samplesToCopy * sizeof(float));
-		PlaneverbDSP::SendSource(m_data.id, &dspInput, dataArray, samplesToCopy / CHANNELS);
-		//std::memset(out, 0, sizeof(float) * samples);
+		PlaneverbDSP::SendSource(m_data.dspID, &dspInput, dataArray, samplesToCopy / CHANNELS);
+		
 		float* dry = nullptr;
 		float* obA = nullptr;
 		float* obB = nullptr;
@@ -177,7 +190,7 @@ void AudioCore::ProcessBlock(float * out, int frames)
 		for (int i = 0; i < samplesToCopy; ++i)
 		{
 			// no reverb here
-			*out++ = *dry++;
+			*out++ = *dry++ * gain;
 		}
 		
 		m_data.readIndex += samplesToCopy;

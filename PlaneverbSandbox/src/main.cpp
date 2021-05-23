@@ -6,6 +6,7 @@
 #include <Planeverb.h>
 #include <PlaneverbDSP.h>
 #include <iostream>
+#include <fstream>
 
 ImVec2 LISTENING_REGION = { 20.f, 20.f };
 

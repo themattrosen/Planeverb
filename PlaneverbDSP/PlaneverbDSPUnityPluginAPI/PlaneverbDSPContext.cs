@@ -25,18 +25,35 @@ namespace Planeverb
 
 		[DllImport(DLLNAME)]
 		private static extern void PlaneverbDSPInit(int maxCallbackLength, int samplingRate,
-		int dspSmoothingFactor, bool useSpatialization, float wetGainRatio);
+		int dspSmoothingFactor, bool useSpatialization,
+		float wetGainRatio, int maxEmitters);
 
 		[DllImport(DLLNAME)]
 		private static extern void PlaneverbDSPExit();
 
 		[DllImport(DLLNAME)]
-		private static extern void PlaneverbDSPSetListenerTransform(float posX, float posY, float posZ,
-		float forwardX, float forwardY, float forwardZ);
+		private static extern void PlaneverbDSPSetListenerTransform(
+			float posX, float posY, float posZ,
+			float forwardX, float forwardY, float forwardZ,
+			float upX, float upY, float upZ
+		);
 
 		[DllImport(DLLNAME)]
-		private static extern void PlaneverbDSPUpdateEmitter(int emissionID, float posX, float posY, float posZ,
-			float forwardX, float forwardY, float forwardZ);
+		private static extern int PlaneverbDSPAddEmitter(
+			float posX, float posY, float posZ,
+			float forwardX, float forwardY, float forwardZ,
+			float upX, float upY, float upZ
+		);
+
+		[DllImport(DLLNAME)]
+		private static extern void PlaneverbDSPUpdateEmitter(int emissionID,
+			float posX, float posY, float posZ,
+			float forwardX, float forwardY, float forwardZ,
+			float upX, float upY, float upZ
+		);
+
+		[DllImport(DLLNAME)]
+		private static extern void PlaneverbDSPRemoveEmitter(int emissionID);
 
 		[DllImport(DLLNAME)]
 		private static extern void PlaneverbDSPSetEmitterDirectivityPattern(int emissionId, int pattern);
@@ -82,7 +99,9 @@ namespace Planeverb
 			globalContext = this;
 
 			PlaneverbDSPInit(config.maxCallbackLength, config.samplingRate,
-				config.dspSmoothingFactor, config.useSpatialization, config.wetGainRatio);
+				config.dspSmoothingFactor, config.useSpatialization,
+				config.wetGainRatio, config.maxEmitters
+			);
 		}
 
 		void OnDestroy()
@@ -93,16 +112,35 @@ namespace Planeverb
 		#endregion
 
 		#region Static Interface
-		public static void SetListenerTransform(Vector3 position, Vector3 forward)
+		public static void SetListenerTransform(Vector3 position, Vector3 forward, Vector3 up)
 		{
 			PlaneverbDSPSetListenerTransform(position.x, position.y, position.z,
-				forward.x, forward.y, forward.z);
+				forward.x, forward.y, forward.z,
+				up.x, up.y, up.z
+			);
 		}
 
-		public static void UpateEmitter(int id, Vector3 pos, Vector3 forward)
+		public static int AddEmitter(Vector3 pos, Vector3 forward, Vector3 up)
+        {
+			return PlaneverbDSPAddEmitter(pos.x, pos.y, pos.z,
+				forward.x, forward.y, forward.z,
+				up.x, up.y, up.z
+			);
+        }
+
+		public static void UpdateEmitter(int id, Vector3 pos, Vector3 forward, Vector3 up)
 		{
-			PlaneverbDSPUpdateEmitter(id, pos.x, pos.y, pos.z, forward.x, forward.y, forward.z);
+			PlaneverbDSPUpdateEmitter(id, 
+				pos.x, pos.y, pos.z, 
+				forward.x, forward.y, forward.z,
+				up.x, up.y, up.z
+			);
 		}
+
+		public static void RemoveEmitter(int id)
+        {
+			PlaneverbDSPRemoveEmitter(id);
+        }
 
 		public static void SetEmitterDirectivityPattern(int id, PlaneverbSourceDirectivityPattern pattern)
 		{

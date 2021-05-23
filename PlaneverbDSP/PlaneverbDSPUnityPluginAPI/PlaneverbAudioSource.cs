@@ -166,7 +166,7 @@ namespace Planeverb
 		}
 
 		// getters
-		public int GetEmissionID() { return emitter.GetID(); }
+		public int GetEmissionID() { return emitter.GetPlaneverbID(); }
 
 		public PlaneverbDSPInput GetInput()
 		{

@@ -4,6 +4,7 @@
 #include "Util.h"
 #include <portaudio.h>
 #include <Planeverb.h>
+#include <PlaneverbDSP.h>
 
 struct AudioData;
 
@@ -14,7 +15,8 @@ struct PlayingData
 	float volume = 1.f;
 	int readIndex = 0;
 	AudioData* dataPlaying = nullptr;
-	Planeverb::EmissionID id = Planeverb::PV_INVALID_EMISSION_ID;
+	Planeverb::EmissionID planeverbID = Planeverb::PV_INVALID_EMISSION_ID;
+	PlaneverbDSP::EmissionID dspID = PlaneverbDSP::PV_INVALID_EMISSION_ID;
 };
 
 float gainToDB(float gain);

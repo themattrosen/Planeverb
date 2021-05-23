@@ -23,19 +23,22 @@ namespace PlaneverbDSP
 		void GetOutput(float** dryOut, float** outA, float** outB, float** outC);
 
 		// update global listener transform
-		void SetListenerTransform(const vec3& position, const vec3& forward);
+		void SetListenerTransform(const vec3& position, const vec3& forward, const vec3& up);
 
-		EmissionsManager* GetEmissionManager() { return m_emissions; }
+		PV_DSP_INLINE EmissionsManager* GetEmissionManager() { return m_emissions; }
+
+		PV_DSP_INLINE bool IsRunning() const { return m_isRunning; }
 
 	private:
 		PlaneverbDSPConfig m_config;			// copy of the user configuration
 		unsigned m_bufferSize;					// size in bytes of each buffer
+		bool m_isRunning = false;
 
 		struct
 		{
 			vec3 position;
 			vec3 forward;
-			// assume up is (0, 1, 0)
+			vec3 up;
 		} m_listenerTransform;					// anonymous struct of listener information
 
 		// memory for all buffers allocated at once
