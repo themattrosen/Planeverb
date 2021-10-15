@@ -42,3 +42,20 @@ Bibtex key to cite this work (we encourage you to):
  year = {2020}
 }
 ```
+
+## Unity Integration Guide
+To add Planeverb to Unity, copy the following two folders into your Unity Assets folder:
+* `Planeverb/ProjectPlaneverb/PlaneverbUnityPluginAPI`
+* `Planeverb/PlaneverbDSP/PlaneverbDSPUnityPluginAPI`
+
+1. Add 1 copy of the `PvContext` prefab to the scene.
+  * **IMPORTANT**: Any changes to either Context script attached to the root object made while in Game mode won't take effect. Changes must be made outside of the Game mode.
+3. Add the `PlaneverbDSPMaster` mixer as your master mixer.
+  * *Note*: The reverbs attached to this mixer can be customized! They were designed by a programmer, so there is definitely room for improvement. Feel free to open an issue with parameter improvements. 
+  * *Note*: When customizing the reverbs, take special care not to adjust the decay times/reverb time/RT60 of any of them. These values are specially chosen by the system, and the code assumes that these values are 0.5s, 1.0s, and 3.0s. 
+5. Add the `PlaneverbListener` script to your Audio Listener.
+6. Add the `PlaneverbObject` script to all objects that are occluders in your scene.
+  * **IMPORTANT**: The PlaneverbObject script adds the `Bounds` of the object it is attached to as an AABB to the Planeverb voxelizer. If you have a large complex mesh, or a mesh with any sort of concavity, this will NOT sound how you anticipate. It will be better to make smaller subobjects with small bounds to voxelize the object yourself, and attach a PlaneverbObject script to each one.
+  * This is not ideal, but the only solution for now other than simply avoiding concave or complex objects. Planeverb is not very flexible in it's current state.
+7. Add the `PlaneverbEmitter` script to all Audio Source/emitters in your scene. 
+  * **IMPORTANT**: Planeverb won't work with sounds played through Unity built in Audio Sources. Planeverb hi-jacks the normal audio playback of Unity through the PvContext object.
