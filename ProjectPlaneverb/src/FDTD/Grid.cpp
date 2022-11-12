@@ -136,10 +136,10 @@ namespace Planeverb
 	void Grid::AddAABB(const AABB * transform)
 	{
 		// define edges of the AABB
-		const int startY = (int)((transform->position.y - transform->height / (Real)2.f + m_gridOffset.x) * ((Real)1.f / m_dx));
-		const int startX = (int)((transform->position.x - transform->width  / (Real)2.f + m_gridOffset.y) * ((Real)1.f / m_dx));
-		const int endY   = (int)((transform->position.y + transform->height / (Real)2.f + m_gridOffset.x) * ((Real)1.f / m_dx));
-		const int endX   = (int)((transform->position.x + transform->width  / (Real)2.f + m_gridOffset.y) * ((Real)1.f / m_dx));
+		const int startY = (int)((transform->position.y - transform->height / (Real)2.f + m_gridOffset.y) * ((Real)1.f / m_dx));
+		const int startX = (int)((transform->position.x - transform->width  / (Real)2.f + m_gridOffset.x) * ((Real)1.f / m_dx));
+		const int endY   = (int)((transform->position.y + transform->height / (Real)2.f + m_gridOffset.y) * ((Real)1.f / m_dx));
+		const int endX   = (int)((transform->position.x + transform->width  / (Real)2.f + m_gridOffset.x) * ((Real)1.f / m_dx));
 		
 		const vec2 newGridSize(m_gridSize.x + 1, m_gridSize.y + 1);
 

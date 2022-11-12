@@ -81,7 +81,9 @@ namespace Planeverb
 		int emitterY = listenerY;
 
 		// generate a set of IRs in the grid, calculate the free energy
-		m_grid->GenerateResponse(vec3(listenerX * m_dx, 0, listenerY * m_dx));
+		float world_x  = listenerX * m_dx - config->gridWorldOffset.x;
+		float world_y  = listenerY * m_dx - config->gridWorldOffset.y;
+		m_grid->GenerateResponse(vec3(world_x, 0, world_y));
 		const Cell* response = m_grid->GetResponse(vec2((float)emitterX, (float)emitterY));
         Real freeFieldEnergy = CalculateEFree(response, m_grid->GetResponseSize(), (int)m_grid->GetSamplingRate());
 
